@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
+  <meta name="robots" content="noindex, nofollow" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Зарплатна відомість КЦ (SPA + Етап 4: Зворотній зв'язок)</title>
@@ -29,6 +30,15 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Inter, Arial, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
 
+    <script>
+  var check = prompt("Введіть пароль для доступу до прототипу:");
+  if (check !== "23226") { 
+    document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>Доступ заборонено</h2>";
+    window.stop();
+  }
+</script>
+
+                          
     .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; transition: grid-template-columns 0.2s ease; }
     .layout.sidebar-collapsed { grid-template-columns: 60px 1fr; }
 
@@ -220,13 +230,13 @@
   <div class="layout" id="mainLayout">
     <aside>
       <button class="sidebar-toggle-btn" onclick="toggleSidebar()">◀</button>
-      <div class="logo"><div class="logo-mark"></div><span>Home-Net HR</span></div>
+      <div class="logo"><div class="logo-mark"></div><span>Якась Компанія</span></div>
       
-      <div class="menu-title">HOME-KЦ Зарплата</div>
+      <div class="menu-title">Чогось нарахування</div>
       <div class="menu-item" id="menu-instructions" onclick="switchView('instructions')">Інструкція з функціоналу</div>
       <div class="menu-item" active id="menu-hourly" onclick="switchView('hourly')">Розрахунок ЗП погодинники</div>
       <div class="menu-item" id="menu-manager" onclick="switchView('manager')">Зарплатна відомість керівника</div>
-      <div class="menu-item" id="menu-hkc" onclick="switchView('hkc')">Зарплатна відомість HOME-КЦ</div>
+      <div class="menu-item" id="menu-hkc" onclick="switchView('hkc')">Зарплатна відомість</div>
       <div class="menu-item" id="menu-settings" onclick="switchView('settings')">Налаштування коефіціентів</div>
     </aside>
 
@@ -264,7 +274,7 @@
 
           <div style="height: 1px; background: var(--border); margin: 20px 0;"></div>
 
-          <h2 style="font-size: 16px; color: var(--primary);">3. Зарплатна відомість НОМЕ-КЦ</h2>
+          <h2 style="font-size: 16px; color: var(--primary);">3. Зарплатна відомість</h2>
           <p style="color: var(--muted); margin-top: -6px; margin-bottom: 12px;">Доступно для опрацювання після того, як на сторінці "Зарплатна відомість керівника" було натиснуто "Бонуси погоджено".</p>
           <ul style="list-style: none; padding-left: 0; margin-bottom: 24px;">
             <li style="margin-bottom: 8px;"><span class="btn-action" style="background:#3b82f6; color:#fff; display:inline-block; pointer-events:none;">ОФ ЗП з КУП</span> — Завантажує офіційну виплату ЗП за розрахунковий місяць.</li>
@@ -340,13 +350,13 @@
       </div>
 
       <!-- ========================================== -->
-      <!-- В'Ю 1.5: ЗАРПЛАТНА ВІДОМІСТЬ HOME-КЦ (HKC) -->
+      <!-- В'Ю 1.5: ЗАРПЛАТНА ВІДОМІСТЬ(HKC) -->
       <!-- ========================================== -->
       <div id="view-hkc" class="view-container">
         <div class="topbar">
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 16px;">
-              <h1 style="font-size: 20px;">Зарплатна відомість НОМЕ-КЦ</h1>
+              <h1 style="font-size: 20px;">Зарплатна відомість</h1>
               <span id="hkcStatusBadge" class="badge-status">Очікування звіту</span>
               <button id="hkcWorkflowBtn" class="workflow-btn" style="display:none;" onclick="advanceHkcWorkflow()"></button>
             </div>
@@ -375,7 +385,7 @@
           <div class="metric-inline"><span class="m-label">Виплачено</span><span class="m-val" id="hkcTotalPaid" style="color: var(--success);">0</span></div>
         </div>
 
-        <div class="supervisor-label">Керівник Колл-центру "HOME KЦ": Фреїк Тетяна Андріївна</div>
+        <div class="supervisor-label">Керівник Іванов Іван Іванович</div>
 
         <div class="filter-card">
           <div class="filter-group"><label>Пошук за ПІП:</label><input type="text" id="hkcSearchName" class="filter-input" placeholder="Введіть ПІП..." oninput="handleHkcFiltersChange()" /></div>
@@ -423,7 +433,7 @@
 
         <div class="table-card" id="hkcTableCardBlock">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:11px;">
-            <strong>Зведена відомість НОМЕ-КЦ</strong>
+            <strong>Зведена відомість </strong>
             <button class="btn-fullscreen" onclick="toggleFullscreenTable('hkcTableCardBlock')">🖵 На весь екран</button>
           </div>
           <div class="table-wrap">
@@ -503,7 +513,7 @@
       <div id="view-settings" class="view-container">
         <div class="topbar" style="align-items: flex-start;">
           <div>
-            <h1 style="font-size: 20px;">Параметри ОЩАД</h1>
+            <h1 style="font-size: 20px;">Параметри </h1>
             <div style="color: var(--muted); font-size:12px; margin-top:6px;">Редагуються поля "Дані:" та числовий стовпчик «Значення (вміст)». ID параметрів заблоковані у всіх статусах.</div>
           </div>
           <div style="display: flex; gap: 8px;">
@@ -552,7 +562,7 @@
     ];
     var currentStatus = 'NEW';
     
-    // СТАТУСИ НОМЕ-КЦ
+    // СТАТУСИ 
     const HKC_STATUS_MAP = {
       'NEW': { label: 'Очікування звіту', color: '#6b7280' },
       'BONUS_IN_PROGRESS': { label: 'Очікування звіту', color: '#6b7280' },
@@ -592,7 +602,7 @@
     // 1. БАЗА ДАНИХ (ГЕНЕРАЦІЯ ЄДИНОЇ БАЗИ)
     // ==========================================
     function initDatabase() {
-      var surnamesList = ["Шевченко", "Іванов", "Коваленко", "Бондаренко", "Ткаченко", "Кравченко", "Павленко", "Петренко", "Харченко", "Мельник", "Поліщук", "Козак", "Олійник", "Руденко", "Жупанюк", "Чумак", "Слободян", "Курилов"];
+      var surnamesList = ["Шевченко", "Іванов", "Коваленко", "Бондаренко", "Ткаченко", "Кравченко", "Павленко", "Петренко", "Харченко", "Мельник", "Поліщук", "Козак", "Олійник", "Руденко", "Жупанюк", "Чумак", "Слободян", "Іващук"];
       var namesList = ["Андрій", "Олександр", "Сергій", "Дмитро", "Ігор", "Роман", "Артем", "Микола", "Володимир", "Наталія", "Олена", "Тетяна", "Марія", "Ірина", "Юлія"];
       var patronymicsList = ["Миколайович", "Олександрович", "Петрович", "Сергійович", "Володимирович", "Василівна", "Миколаївна", "Петрівна", "Сергіївна"];
       var staffRolesList = ["Провідний фахівець", "Фахівець з розвитку персоналу", "Фахівець з персоналу"];
@@ -613,7 +623,7 @@
         
         let isStaff = i < 21; 
         let payment_type = isStaff ? "Штатна" : "Погодинна";
-        let position = isStaff ? staffRolesList[i % staffRolesList.length] : 'Фахівець Колл-центру "НОМЕ-КЦ"';
+        let position = isStaff ? staffRolesList[i % staffRolesList.length] : 'Фахівець"';
 
         let dateFired = null;
         let mockUnusedVacation = 0;
@@ -755,7 +765,7 @@
 
 
     // ==========================================
-    // В'Ю 1.5: ЗАРПЛАТНА ВІДОМІСТЬ HOME-КЦ (HKC)
+    // В'Ю 1.5: ЗАРПЛАТНА ВІДОМІСТЬ (HKC)
     // ==========================================
     var hkcCurrentSortCol = 'id';
     var hkcSortAsc = true;
