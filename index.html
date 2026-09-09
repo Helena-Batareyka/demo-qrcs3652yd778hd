@@ -223,6 +223,7 @@
       <div class="logo"><div class="logo-mark"></div><span>Home-Net HR</span></div>
       
       <div class="menu-title">HOME-KЦ Зарплата</div>
+      <div class="menu-item" id="menu-instructions" onclick="switchView('instructions')">Інструкція з функціоналу</div>
       <div class="menu-item" active id="menu-hourly" onclick="switchView('hourly')">Розрахунок ЗП погодинники</div>
       <div class="menu-item" id="menu-manager" onclick="switchView('manager')">Зарплатна відомість керівника</div>
       <div class="menu-item" id="menu-hkc" onclick="switchView('hkc')">Зарплатна відомість HOME-КЦ</div>
@@ -230,6 +231,60 @@
     </aside>
 
     <main>
+
+
+      <!-- ========================================== -->
+      <!-- В'Ю 0: ІНСТРУКЦІЯ (INSTRUCTIONS)           -->
+      <!-- ========================================== -->
+      <div id="view-instructions" class="view-container">
+        <div class="topbar">
+          <div>
+            <h1>Інструкція з функціоналу</h1>
+            <div style="color: var(--muted); font-size:12px; margin-top:6px;">Опис логіки роботи системи та послідовності дій</div>
+          </div>
+        </div>
+
+        <div class="table-card" style="padding: 24px; font-size: 13px; line-height: 1.6; color: var(--text);">
+          <h2 style="font-size: 16px; color: var(--primary); margin-top: 0;">1. Розрахунок ЗП погодинники</h2>
+          <ul style="list-style: none; padding-left: 0; margin-bottom: 24px;">
+            <li style="margin-bottom: 8px;"><span class="step-btn done" style="display:inline-block; pointer-events:none;">Крок 1. ПІП</span> — Завантажує працівників з БД.</li>
+            <li style="margin-bottom: 8px;"><span class="step-btn pending" style="display:inline-block; pointer-events:none;">Крок 2. Файли</span> — Відповідає за завантаження файлів Ощад.</li>
+            <li style="margin-bottom: 8px;"><span class="step-btn disabled" style="display:inline-block; pointer-events:none;">Крок 3. Ручні поля</span> — Відкриває поля для ручного редагування.</li>
+            <li style="margin-bottom: 8px;"><span class="step-btn disabled" style="display:inline-block; pointer-events:none;">Крок 5. Разом</span> — Рахує дані згідно встановленим формулам і правилам.</li>
+            <li style="margin-bottom: 8px;"><span class="step-btn disabled" style="display:inline-block; pointer-events:none;">Крок 6. Передати в загальну відомість</span> — Транслює дані в "Зарплатна відомість керівника".</li>
+          </ul>
+
+          <div style="height: 1px; background: var(--border); margin: 20px 0;"></div>
+
+          <h2 style="font-size: 16px; color: var(--primary);">2. Зарплатна відомість керівника (Етап 1)</h2>
+          <ul style="list-style: none; padding-left: 0; margin-bottom: 24px;">
+            <li style="margin-bottom: 8px;"><span class="workflow-btn" style="background:#1890FF; padding:4px 12px; font-size:11px; display:inline-block; pointer-events:none;">Розпочати</span> — Доступно завжди.</li>
+            <li style="margin-bottom: 8px;"><span class="workflow-btn" style="background:#16a34a; padding:4px 12px; font-size:11px; display:inline-block; pointer-events:none;">Бонуси погоджено</span> — Доступно тільки після трансляції даних із сторінки "Розрахунок ЗП погодинники".</li>
+          </ul>
+
+          <div style="height: 1px; background: var(--border); margin: 20px 0;"></div>
+
+          <h2 style="font-size: 16px; color: var(--primary);">3. Зарплатна відомість НОМЕ-КЦ</h2>
+          <p style="color: var(--muted); margin-top: -6px; margin-bottom: 12px;">Доступно для опрацювання після того, як на сторінці "Зарплатна відомість керівника" було натиснуто "Бонуси погоджено".</p>
+          <ul style="list-style: none; padding-left: 0; margin-bottom: 24px;">
+            <li style="margin-bottom: 8px;"><span class="btn-action" style="background:#3b82f6; color:#fff; display:inline-block; pointer-events:none;">ОФ ЗП з КУП</span> — Завантажує офіційну виплату ЗП за розрахунковий місяць.</li>
+            <li style="margin-bottom: 8px;"><span class="btn-action" style="background:#8b5cf6; color:#fff; display:inline-block; pointer-events:none;">Лікарняні з КУП</span> — Завантажує офіційну оплату лікарняних.</li>
+            <li style="margin-bottom: 8px;"><span class="btn-action" style="background:#0ea5e9; color:#fff; display:inline-block; pointer-events:none;">Відпускні використані з КУП</span> — Завантажує кількість днів відпустки, яку працівник використав у розрахунковому місяці.</li>
+            <li style="margin-bottom: 8px;"><span class="btn-action" style="background:#14b8a6; color:#fff; display:inline-block; pointer-events:none;">Відпускні не використані з КУП</span> — Завантажує залишок днів відпустки, тільки якщо присутня дата звільнення в розрахунковому місяці.</li>
+            <li style="margin-bottom: 8px; margin-top: 12px;"><span class="workflow-btn" style="background:#3b82f6; padding:4px 12px; font-size:11px; display:inline-block; pointer-events:none;">Опрацьовано</span> — Доступна, коли всі дані завантажено. Фіксує зміни.</li>
+            <li style="margin-bottom: 8px;"><span class="workflow-btn" style="background:#10b981; padding:4px 12px; font-size:11px; display:inline-block; pointer-events:none;">Погоджено</span> — Відкриває доступ керівнику для виплати ЗП на сторінці "Зарплатна відомість керівника".</li>
+          </ul>
+
+          <div style="height: 1px; background: var(--border); margin: 20px 0;"></div>
+
+          <h2 style="font-size: 16px; color: var(--primary);">4. Зарплатна відомість керівника (Фінальний етап)</h2>
+          <ul style="list-style: none; padding-left: 0; margin-bottom: 0;">
+            <li style="margin-bottom: 8px;">🔘 Заповнює <strong>Видано</strong> вручну.</li>
+            <li style="margin-bottom: 8px;">🔘 Встановлює округлення в рекомендоване та здійснює <strong>групову видачу</strong>.</li>
+            <li style="margin-bottom: 8px;"><span class="workflow-btn" style="background:#D71B1B; padding:4px 12px; font-size:11px; display:inline-block; margin-top:4px; margin-bottom:4px; pointer-events:none;">Зарплату видано</span> — Натискання кнопки блокує звіт, зберігає як архівний, використовується для створення наступного (перенос залишків).</li>
+          </ul>
+        </div>
+      </div>
       
       <!-- ========================================== -->
       <!-- В'Ю 1: ЗАРПЛАТНА ВІДОМІСТЬ КЕРІВНИКА (MANAGER) -->
