@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Зарплатна відомість КЦ (SPA + Етап 4: Зворотній зв'язок)</title>
+  <style>
+    :root {
+      --primary: #9182ff;
+      --accent: #ff660a;
+      --bg: #f4f5f8;
+      --card: #ffffff;
+      --text: #1f2430;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warn: #f59e0b;
+      --info: #2563eb;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      
+      --color-gray: #f3f4f6;
+      --color-blue: #e0f2fe;
+      --color-yellow: #fef3c7;
+      --color-green: #dcfce7;
+      --color-red: #fee2e2;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; transition: grid-template-columns 0.2s ease; }
+    .layout.sidebar-collapsed { grid-template-columns: 60px 1fr; }
+
+    aside { background: #111827; color: #fff; padding: 20px 12px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+    .sidebar-toggle-btn { position: absolute; right: 12px; top: 20px; background: #1f2937; color: #fff; border: 1px solid #374151; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; z-index: 10; }
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; font-weight: 800; font-size: 16px; white-space: nowrap; }
+    .logo-mark { width: 28px; height: 28px; border-radius: 6px; background: var(--accent); flex-shrink: 0; }
+    
+    .layout.sidebar-collapsed .logo span, .layout.sidebar-collapsed .menu-title, .layout.sidebar-collapsed .menu-item span { display: none; }
+    .menu-title { color: #9ca3af; font-size: 10px; text-transform: uppercase; margin: 16px 8px 6px; letter-spacing: .08em; }
+    .menu-item { padding: 10px 12px; border-radius: 10px; color: #d1d5db; margin-bottom: 4px; font-size: 13px; white-space: nowrap; cursor: pointer; transition: background 0.2s; }
+    .menu-item:hover { background: rgba(255, 255, 255, 0.05); }
+    .menu-item.active { background: rgba(255, 102, 10, 0.12); color: #fff; border-left: 3px solid var(--accent); }
+
+    main { padding: 16px; display: flex; flex-direction: column; min-width: 0; }
+    
+    .view-container { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.3s ease; }
+    .view-container.active-view { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); gap: 16px; flex-wrap: wrap; }
+    h1 { margin: 0; font-size: 20px; font-weight: 800; }
+    
+    .mini-metrics-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+    .metric-inline { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; box-shadow: var(--shadow); gap: 4px; }
+    .m-label { color: var(--muted); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    .m-val { font-size: 13px; font-weight: 800; }
+    
+    .supervisor-label { font-weight: 800; font-size: 15px; color: var(--text); padding-left: 4px; margin: 4px 0; }
+
+    .filter-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow); display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+    .filter-group { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .filter-group label { font-weight: 700; color: #4b5563; white-space: nowrap; }
+    .filter-input { border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 12px; outline: none; }
+    .filter-input:disabled { background: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
+
+    .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); width: 100%; transition: all 0.25s ease-in-out; }
+    .table-card.fullscreen-mode { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 5000; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; border-radius: 0; padding: 20px; background: #f4f5f8; display: flex; flex-direction: column; }
+    .table-card.fullscreen-mode .table-wrap { max-height: calc(100vh - 100px) !important; flex: 1; }
+
+    .btn-fullscreen { cursor: pointer; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: #e5e7eb; border: 1px solid var(--border); user-select: none; white-space: nowrap; }
+    .btn-fullscreen:hover { background: #cbd5e1; }
+    
+    .table-wrap { display: block; width: 100%; max-height: 520px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #fff; position: relative; }
+    .table-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+    .table-wrap::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid #f1f5f9; }
+    .table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    table { width: max-content !important; border-collapse: separate; border-spacing: 0; font-size: 11px; color: #000; }
+    th, td { border-bottom: 1px solid var(--border); border-right: 1px solid #f1f5f9; padding: 8px 12px; text-align: left; vertical-align: middle; white-space: nowrap !important; }
+    
+    th { position: sticky; top: 0; background: #f9fafb; z-index: 10; color: #4b5563; font-weight: 700; border-bottom: 2px solid var(--border); user-select: none; cursor: pointer; transition: background 0.1s; line-height: 1.3; }
+    th:hover { background: #f1f5f9; color: var(--accent); }
+    .sort-icon { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--muted); }
+    
+    table.manager-table th:first-child, table.manager-table td:first-child { position: sticky !important; left: 0 !important; background: #fff !important; z-index: 15; min-width: 220px !important; max-width: 220px !important; box-shadow: 4px 0 8px rgba(0,0,0,0.05); white-space: normal !important; }
+    table.manager-table th:first-child { z-index: 20; background: #f9fafb !important; }
+
+    .sticky-cell { position: sticky !important; z-index: 15; background: #fff; }
+    th.sticky-cell { z-index: 20; background: #f9fafb !important; }
+    .sticky-shadow { box-shadow: 4px 0 8px rgba(0,0,0,0.05); }
+    td.sticky-cell.bg-spec-gray { background: var(--color-gray); }
+
+    .bg-spec-gray { background-color: var(--color-gray) !important; }
+    .bg-spec-blue { background-color: var(--color-blue) !important; }
+    .bg-spec-yellow { background-color: var(--color-yellow) !important; }
+    .bg-spec-green { background-color: var(--color-green) !important; }
+    .bg-spec-red { background-color: var(--color-red) !important; }
+
+    .fired-row td { background-color: #fee2e2 !important; }
+    tr.fired-row td.sticky-cell { background-color: #fee2e2 !important; }
+
+    .interactive-link { color: #1e40af; font-weight: 700; text-decoration: underline; cursor: pointer; }
+    .interactive-link:hover { color: var(--accent); }
+    .btn-add-bonus { background: #fff; color: #0369a1; border: 1px dashed #0369a1; padding: 2px 6px; font-size: 10px; border-radius: 4px; font-weight: 700; cursor: pointer; }
+    .badge-type { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; background: #fff; border: 1px solid #cbd5e1; }
+
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(15, 23, 42, 0.4); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    .modal-card { background: #fff; padding: 16px; border-radius: 10px; max-width: 350px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    .modal-bonus-card { background: #fff; border-radius: 6px; max-width: 600px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15); overflow: hidden; border: 1px solid #94a3b8; color: #000; }
+    .modal-bonus-header { background: #0284c7; color: #fff; padding: 10px 14px; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .modal-bonus-body { padding: 14px; overflow-y: auto; flex-grow: 1; }
+    
+    .excel-mock-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+    .excel-mock-table th, .excel-mock-table td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
+    .excel-mock-table th { background: #f8fafc; font-weight: 700; }
+    .excel-mock-table td:nth-child(2) { text-align: right; font-weight: 700; }
+    .excel-mock-table tr.total-row { background: #cbd5e1; font-weight: bold; }
+    
+    .input-modal-style { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; margin-bottom: 8px; outline: none; }
+    .pagination-container { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 10px; }
+    .page-link { padding: 4px 10px; border: 1px solid var(--border); background: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; user-select: none; color: var(--text); }
+    .page-link:hover { background: #f1f5f9; border-color: var(--accent); color: var(--accent); }
+    .page-link.active { background: var(--accent); color: #fff; border-color: var(--accent); cursor: default; }
+    .page-link.disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-action { transition: all 0.2s; border:none; padding:8px 12px; border-radius:6px; font-weight:800; font-size: 11px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .btn-action:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-action:disabled { cursor: not-allowed; opacity: 0.6; }
+
+    .workflow-btn { transition: all 0.2s; border:none; padding:8px 24px; border-radius:6px; font-weight:800; font-size: 13px; color:#fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; }
+    .workflow-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }
+    .workflow-btn:active:not(:disabled) { transform: translateY(0); }
+    .workflow-btn:disabled { opacity: 0.5; cursor: not-allowed; } 
+
+    .badge-status { padding:4px 12px; border-radius:20px; font-weight:bold; font-size:11px; color:#fff; cursor:default; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    .steps-container { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .step-btn { border: 0; padding: 6px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; white-space: nowrap; transition: all 0.2s ease; background: #e5e7eb; color: #4b5563; cursor: not-allowed; }
+    .step-btn.pending { background: var(--danger); color: #fff; cursor: pointer; }
+    .step-btn.done { background: var(--success); color: #fff; cursor: pointer; }
+    .step-btn.disabled { background: #e5e7eb; color: #9ca3af; opacity: 0.6; cursor: not-allowed; }
+
+    .ob-lines-box { display: flex; gap: 8px; align-items: center; }
+    .ob-checkbox { display: flex; align-items: center; gap: 3px; cursor: pointer; font-weight: 600; }
+
+    .tabs-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; box-shadow: var(--shadow); display: none; }
+    .tabs-nav { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding-bottom: 4px; overflow-x: auto; }
+    .tab-btn { background: #f3f4f6; border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; padding: 4px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+    .tab-btn.active { background: #fff; border-bottom: 2px solid var(--accent); color: var(--accent); }
+    .tab-btn.file-loaded { border-top: 2px solid var(--success); }
+    .tab-content { padding: 8px; background: #fafafa; border-radius: 0 0 8px 8px; display: none; border: 1px solid var(--border); border-top: none; }
+    .tab-content.active { display: block; }
+    .upload-zone { display: flex; align-items: center; justify-content: space-between; font-size: 11px; }
+
+    .th-content { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; width: 100%; }
+    .visibility-toggle { cursor: pointer; font-size: 12px; user-select: none; padding: 2px 4px; border-radius: 4px; background: #e5e7eb; color: var(--text); }
+    .visibility-toggle:hover { background: #cbd5e1; }
+    th.col-collapsed, td.col-collapsed { min-width: 38px !important; max-width: 38px !important; width: 38px !important; padding: 8px 4px !important; text-align: center !important; background: #f1f5f9 !important; overflow: hidden; cursor: default; }
+    th.col-collapsed .th-label, th.col-collapsed .code, th.col-collapsed .sort-icon, td.col-collapsed * { display: none !important; }
+    th.col-collapsed .visibility-toggle { display: inline-block !important; margin: 0 auto; }
+    .col-hidden { display: none !important; }
+    
+    .code { display: block; color: var(--muted); font-size: 9px; font-family: monospace; margin-top: 4px; font-weight: normal; user-select: all; cursor: pointer; transition: color 0.2s; }
+    .code:hover { color: var(--accent); }
+    .empty { color: #9ca3af; }
+    .system-empty { background: #fff7ed; color: #9a3412; font-style: italic; font-size: 10px; }
+    .manual-input { width: 100%; min-width: 60px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px; font-size: 11px; }
+    .manual-input:focus { border-color: var(--accent); outline: none; }
+    details { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; box-shadow: var(--shadow); font-size: 12px; }
+    summary { font-weight: 700; cursor: pointer; color: #374151; outline: none; }
+    .log { display: grid; gap: 4px; max-height: 120px; overflow: auto; margin-top: 6px; font-size: 11px; }
+    .event { border-left: 2px solid var(--accent); padding-left: 8px; }
+    .mini-progress-bg { width: 60px; height: 6px; background: #e5e7eb; border-radius: 4px; overflow: hidden; display: inline-block; margin-left: 6px; vertical-align: middle; }
+    .mini-progress-bar { height: 100%; width: 0; background: var(--accent); }
+
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+    .badge-draft { background: #fef3c7; color: #92400e; }
+    .badge-ok { background: #dcfce7; color: #166534; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+    .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid #cbd5e1; }
+
+    .id-cell { background: #f3f4f6 !important; color: #6b7280; font-weight: 700; cursor: not-allowed; }
+    .value-cell { background: #fafafa; min-width: 170px; }
+    .value-input-set { width: 100%; min-width: 140px; border: 1px solid var(--primary); border-radius: 6px; padding: 6px; font-size: 12px; background: #fff; outline: none; }
+    .readonly-value { font-weight: 700; }
+    .changed { background: #fff7ed !important; }
+    .invalid { border-color: var(--danger) !important; background: #fff1f2 !important; }
+    .set-status-view { background: #f3f4f6; color: #4b5563; }
+    .set-status-edit { background: #fef3c7; color: #92400e; }
+    .set-status-saved { background: #dcfce7; color: #166534; }
+  </style>
+</head>
+<body>
+
+  <!-- Модалки -->
+  <div class="modal-overlay" id="bonusModal">
+    <div class="modal-bonus-card" id="modalCardSize">
+      <div class="modal-bonus-header">
+        <span id="modalTitle">Деталізація</span>
+        <span style="cursor:pointer; font-size:16px;" onclick="closeBonusModal()">✕</span>
+      </div>
+      <div class="modal-bonus-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-card">
+      <h4 style="margin:0 0 8px 0; color: var(--danger);">Перезапис файлу</h4>
+      <p style="font-size: 12px; margin: 0 0 12px 0;">Попередні дані цієї категорії буде замінено новими. Продовжити?</p>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button style="padding:6px 10px; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer;" onclick="closeConfirmModal()">Ні</button>
+        <button style="padding:6px 10px; border:none; background:var(--danger); color:#fff; border-radius:4px; cursor:pointer;" onclick="confirmReloadFile()">Так, перезалити</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout" id="mainLayout">
+    <aside>
+      <button class="sidebar-toggle-btn" onclick="toggleSidebar()">◀</button>
+      <div class="logo"><div class="logo-mark"></div><span>Home-Net HR</span></div>
+      
+      <div class="menu-title">HOME-KЦ Зарплата</div>
+      <div class="menu-item" id="menu-hourly" onclick="switchView('hourly')">Розрахунок ЗП погодинники</div>
+      <div class="menu-item active" id="menu-manager" onclick="switchView('manager')">Зарплатна відомість керівника</div>
+      <div class="menu-item" id="menu-hkc" onclick="switchView('hkc')">Зарплатна відомість HOME-КЦ</div>
+      <div class="menu-item" id="menu-settings" onclick="switchView('settings')">Налаштування коефіціентів</div>
+    </aside>
+
+    <main>
+      
+      <!-- ========================================== -->
+      <!-- В'Ю 1: ЗАРПЛАТНА ВІДОМІСТЬ КЕРІВНИКА (MANAGER) -->
+      <!-- ========================================== -->
+      <div id="view-manager" class="view-container active-view">
+        <div class="topbar">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <h1 style="font-size: 20px;">Зарплатна відомість керівника</h1>
+              <span id="statusBadge" class="badge-status"></span>
+              <button id="workflowBtn" class="workflow-btn" onclick="advanceWorkflow()">Розпочати</button>
+            </div>
+            <div style="color: var(--muted); font-size:12px;">Кнопка Розпочати заблокована до появи даних з попереднього звіту. Управління процесом нарахувань та виплат відбувається через кнопку дій.</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btnReturnToEdit" class="btn-action" style="background:#dc2626; color:#fff; display:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;" onclick="returnToHourlyEdit()">Повернути на редагування</button>
+            <button id="btnExport" style="border:none; padding:8px 16px; border-radius:6px; font-weight:700; transition:0.2s;" onclick="exportGeneralToExcel()">Експорт в Excel</button>
+          </div>
+        </div>
+
+        <div class="mini-metrics-bar">
+          <div class="metric-inline"><span class="m-label">Всього до видачі</span><span class="m-val" id="totalAmountDue" style="color: var(--accent);">—</span></div>
+          <div class="metric-inline"><span class="m-label">Всього Рекомендовано</span><span class="m-val" id="totalRecommended" style="color: #2563eb;">—</span></div>
+          <div class="metric-inline"><span class="m-label">Всього видано</span><span class="m-val" id="totalCashPaid" style="color: var(--success);">—</span></div>
+          <div class="metric-inline"><span class="m-label">Штатна ставка</span><span class="m-val" id="staffCount">0</span></div>
+          <div class="metric-inline"><span class="m-label">Погодинна ставка</span><span class="m-val" id="hourlyCount">0</span></div>
+          <div class="metric-inline"><span class="m-label">Всього працівників</span><span class="m-val" id="generalOperatorsCount">0</span></div>
+          <div class="metric-inline"><span class="m-label">Звільнені</span><span class="m-val" id="firedCount" style="color: var(--danger);">0</span></div>
+          <div class="metric-inline"><span class="m-label">Всього зароблено</span><span class="m-val" id="totalEarned" style="color: #6b7280;">0</span></div>
+          <div class="metric-inline"><span class="m-label">Залишок</span><span class="m-val" id="totalCarryforward" style="color: #6b7280;">0</span></div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-group"><label>Пошук ПІБ:</label><input type="text" id="searchName" class="filter-input" placeholder="Введіть мін. 3 символи..." oninput="handleFiltersChange()" /></div>
+          <div class="filter-group"><label>Округлення:</label><select id="roundingMode" class="filter-input" onchange="handleFiltersChange()"><option value="none">Як є</option><option value="5">5</option><option value="10">10</option><option value="50">50</option><option value="100">100</option></select></div>
+          <div class="filter-group"><label>Тип ставки:</label><select id="filterType" class="filter-input" onchange="handleFiltersChange()"><option value="all">Показати всіх</option><option value="Штатна">Тільки штатна</option><option value="Погодинна">Тільки погодинна</option></select></div>
+          <div class="filter-group"><label>Видача:</label><select id="filterPayout" class="filter-input" onchange="handleFiltersChange()"><option value="all">Усі</option><option value="paid">Видано</option><option value="unpaid">Не видано</option></select></div>
+          <div class="filter-group"><label>Кількість рядків:</label><select id="rowLimit" class="filter-input" onchange="handleFiltersChange()"><option value="all">Показати всі</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></div>
+          <div class="filter-group"><label>Звільнено:</label><select id="filterFired" class="filter-input" onchange="handleFiltersChange()"><option value="all_employees">Усі</option><option value="only_released">Тільки звільнені</option><option value="only_working">Усі окрім звільнених</option></select></div>
+          <div class="filter-group" style="margin-left: auto;"><button id="autoPayoutBtn" style="display:none; background:#16a34a; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;" onclick="toggleAutoPayout()">Видати з рекомендованого</button></div>
+        </div>
+
+        <div class="table-card" id="tableCardBlock">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:11px;">
+            <strong>Реєстр фінансових нарахувань</strong>
+            <button id="toggleFullscreenBtn" class="btn-fullscreen" onclick="toggleFullscreenTable('tableCardBlock')">🖵 На весь екран</button>
+          </div>
+          <div class="table-wrap">
+            <table id="salaryTable" class="manager-table"></table>
+          </div>
+          <div id="paginationNav" class="pagination-container"></div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- В'Ю 1.5: ЗАРПЛАТНА ВІДОМІСТЬ HOME-КЦ (HKC) -->
+      <!-- ========================================== -->
+      <div id="view-hkc" class="view-container">
+        <div class="topbar">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <h1 style="font-size: 20px;">Зарплатна відомість НОМЕ-КЦ</h1>
+              <span id="hkcStatusBadge" class="badge-status">Очікування звіту</span>
+              <button id="hkcWorkflowBtn" class="workflow-btn" style="display:none;" onclick="advanceHkcWorkflow()"></button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <button id="hkcBtnReturnToManager" class="btn-action" style="background:#dc2626; color:#fff; display:none;" onclick="hkcReturnToManager()">Повернути керівнику</button>
+            <button id="hkcBtnReturnToProcess" class="btn-action" style="background:#dc2626; color:#fff; display:none;" onclick="hkcReturnToProcess()">Повернути на опрацювання</button>
+            
+            <button id="hkcBtnLoadKUP_OF" class="btn-action" style="background:#3b82f6; color:#fff; display:none;" onclick="hkcLoadOfZpFromKup()">ОФ ЗП з КУП</button>
+            <button id="hkcBtnLoadKUP_Sick" class="btn-action" style="background:#8b5cf6; color:#fff; display:none;" onclick="hkcLoadSickPayFromKup()">Лікарняні з КУП</button>
+            <button id="hkcBtnLoadKUP_VacUsed" class="btn-action" style="background:#0ea5e9; color:#fff; display:none;" onclick="hkcLoadVacationUsedFromKup()">Відпускні використані з КУП</button>
+            <button id="hkcBtnLoadKUP_VacUnused" class="btn-action" style="background:#14b8a6; color:#fff; display:none;" onclick="hkcLoadVacationUnusedFromKup()">Відпускні не використані з КУП</button>
+            <button id="hkcBtnExport" class="btn-action" style="background:#e5e7eb; color:#9ca3af;" disabled onclick="alert('Експорт виконано')">Експорт в Excel</button>
+          </div>
+        </div>
+
+        <div class="mini-metrics-bar">
+          <div class="metric-inline"><span class="m-label">Всього працівників</span><span class="m-val" id="hkcTotalEmp">0</span></div>
+          <div class="metric-inline"><span class="m-label">Звільнені</span><span class="m-val" id="hkcFiredCount" style="color: var(--danger);">0</span></div>
+          <div class="metric-inline"><span class="m-label">Рекомендоване округлення</span><span class="m-val" id="hkcRounding" style="color: #6b7280;">Як є</span></div>
+          <div class="metric-inline"><span class="m-label">Всього рекомендовано</span><span class="m-val" id="hkcTotalRec" style="color: #2563eb;">0</span></div>
+          <div class="metric-inline"><span class="m-label">Всього до видачі</span><span class="m-val" id="hkcTotalDue" style="color: var(--accent);">0</span></div>
+          <div class="metric-inline"><span class="m-label">Всього офіційно видано</span><span class="m-val" id="hkcTotalOfficial">0</span></div>
+          <div class="metric-inline"><span class="m-label">Сальдо на початок</span><span class="m-val" id="hkcTotalCarryover" style="color: #6b7280;">0</span></div>
+          <div class="metric-inline"><span class="m-label">Компенсація при звільненні</span><span class="m-val" id="hkcTotalDismissal" style="color: var(--danger);">0</span></div>
+          <div class="metric-inline"><span class="m-label">Виплачено</span><span class="m-val" id="hkcTotalPaid" style="color: var(--success);">0</span></div>
+        </div>
+
+        <div class="supervisor-label">Керівник Колл-центру "HOME KЦ": Фреїк Тетяна Андріївна</div>
+
+        <div class="filter-card">
+          <div class="filter-group"><label>Пошук за ПІП:</label><input type="text" id="hkcSearchName" class="filter-input" placeholder="Введіть ПІП..." oninput="handleHkcFiltersChange()" /></div>
+          <div class="filter-group"><label>Пошук за ІПН:</label><input type="text" id="hkcSearchINN" class="filter-input" placeholder="Введіть ІПН..." oninput="handleHkcFiltersChange()" /></div>
+          <div class="filter-group">
+            <label>Вигляд таблиці:</label>
+            <select id="hkcTableView" class="filter-input" onchange="handleHkcFiltersChange()">
+              <option value="extended">Розширена</option>
+              <option value="short">Скорочена</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Звільнено:</label>
+            <select id="hkcFilterFired" class="filter-input" onchange="handleHkcFiltersChange()">
+              <option value="all">Усі</option>
+              <option value="fired">Тільки звільнені</option>
+              <option value="working">Усі окрім звільнених</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Тип ставки:</label>
+            <select id="hkcFilterType" class="filter-input" onchange="handleHkcFiltersChange()">
+              <option value="all">Показати всіх</option>
+              <option value="Штатна">Тільки штатна</option>
+              <option value="Погодинна">Тільки погодинна</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Відпускні:</label>
+            <select id="hkcFilterVacation" class="filter-input" onchange="handleHkcFiltersChange()">
+              <option value="all">Всі</option>
+              <option value="yes">Так</option>
+              <option value="no">Ні</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Лікарняні:</label>
+            <select id="hkcFilterSick" class="filter-input" onchange="handleHkcFiltersChange()">
+              <option value="all">Всі</option>
+              <option value="yes">Так</option>
+              <option value="no">Ні</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-card" id="hkcTableCardBlock">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:11px;">
+            <strong>Зведена відомість НОМЕ-КЦ</strong>
+            <button class="btn-fullscreen" onclick="toggleFullscreenTable('hkcTableCardBlock')">🖵 На весь екран</button>
+          </div>
+          <div class="table-wrap">
+            <table id="hkcPayrollTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- В'Ю 2: РОЗРАХУНОК ЗП ПОГОДИННИКИ (HOURLY)  -->
+      <!-- ========================================== -->
+      <div id="view-hourly" class="view-container">
+        <div class="topbar">
+          <div>
+            <h1>Розрахунок ЗП Погодинники</h1>
+            <div class="steps-container">
+              <button id="step1" class="step-btn pending" onclick="goToStep1()">Крок 1. ПІП</button>
+              <button id="step2" class="step-btn disabled" onclick="goToStep2()">Крок 2. Файли</button>
+              <button id="step3" class="step-btn disabled" onclick="goToStep3()">Крок 3. Ручні поля</button>
+              <button id="step4" class="step-btn disabled" onclick="goToStep4()">Крок 4. Розрахунок</button>
+              <button id="step5" class="step-btn disabled" onclick="goToStep5()">Крок 5. Разом</button>
+              <button id="step6" class="step-btn disabled" onclick="goToStep6()">Крок 6. Передати в загальну відомість</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button id="hourlyBtnExportExcel" style="background:#16a34a; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer; display:none;" onclick="exportHourlyToExcel()">Експорт в Excel</button>
+            <button style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;" onclick="resetHourlySimulation()">Скинути все</button>
+          </div>
+        </div>
+
+        <div class="mini-metrics-bar">
+          <div class="metric-inline"><span class="m-label">Статус системи:</span><span id="hourlyStatusBadge" class="badge badge-draft">Очікування запуску</span></div>
+          <div class="metric-inline"><span class="m-label">Пакет файлів:</span><div><span class="m-val" id="filesCount">0</span><span style="color:var(--muted); font-size:11px;">/6</span><div class="mini-progress-bg"><div id="progressBar" class="mini-progress-bar"></div></div></div></div>
+          <div class="metric-inline"><span class="m-label">Операторів у базі:</span><span class="m-val" id="operatorsCount">0</span></div>
+          <div class="metric-inline" style="border-left: 3px solid var(--accent);"><span class="m-label">Всього до виплати:</span><span class="m-val" id="hourlyTotalSalary" style="font-weight:900;">—</span></div>
+        </div>
+
+        <div class="filter-card">
+          <div class="filter-group"><label for="hourlySearchName">Пошук ПІБ:</label><input type="text" id="hourlySearchName" class="filter-input" placeholder="Введіть мін. 3 символи..." oninput="handleHourlyFiltersChange()" /></div>
+          <div class="filter-group"><label for="hourlyFilterColumns">Стовпці:</label><select id="hourlyFilterColumns" class="filter-input" onchange="handleHourlyFiltersChange()"><option value="all">Показати все</option><option value="uploaded">Тільки завантажене</option><option value="manual">Тільки ручні коригування</option><option value="calculations">Тільки розрахунки</option></select></div>
+          <div class="filter-group"><label for="hourlyRowLimit">Кількість рядків:</label><select id="hourlyRowLimit" class="filter-input" onchange="handleHourlyFiltersChange()"><option value="all">Показати всі</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></div>
+          <div class="filter-group"><label>Лінія ОБ:</label>
+            <div class="ob-lines-box">
+              <label class="ob-checkbox"><input type="checkbox" value="1" checked onchange="handleHourlyFiltersChange()" /> 1</label>
+              <label class="ob-checkbox"><input type="checkbox" value="2" checked onchange="handleHourlyFiltersChange()" /> 2</label>
+              <label class="ob-checkbox"><input type="checkbox" value="3" checked onchange="handleHourlyFiltersChange()" /> 3</label>
+              <label class="ob-checkbox"><input type="checkbox" value="4" checked onchange="handleHourlyFiltersChange()" /> 4</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs-card" id="filesUploadBlock"><div class="tabs-nav" id="tabsNav"></div><div id="tabsContent"></div></div>
+
+        <div class="table-card" id="hourlyTableCardBlock">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:11px;">
+            <strong style="flex:1;">Зведена відомість нарахувань</strong>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="badge badge-purple" id="visibleColsCounter">Колонок активовано: 1 / 56</span>
+              <button id="hourlyToggleFullscreenBtn" class="btn-fullscreen" onclick="toggleHourlyFullscreenTable()">🖵 На весь екран</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="hourlySalaryTable"></table>
+          </div>
+          <div id="hourlyPaginationNav" class="pagination-container"></div>
+        </div>
+
+        <details>
+          <summary>Показати журнал подій системи (Логування)</summary>
+          <div id="eventLog" class="log"></div>
+        </details>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- В'Ю 3: НАЛАШТУВАННЯ КОЕФІЦІЄНТІВ (SETTINGS) -->
+      <!-- ========================================== -->
+      <div id="view-settings" class="view-container">
+        <div class="topbar" style="align-items: flex-start;">
+          <div>
+            <h1 style="font-size: 20px;">Параметри ОЩАД</h1>
+            <div style="color: var(--muted); font-size:12px; margin-top:6px;">Редагуються поля "Дані:" та числовий стовпчик «Значення (вміст)». ID параметрів заблоковані у всіх статусах.</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btnSetEdit" style="background:#1890FF; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;" onclick="enableSettingsEdit()">Редагувати</button>
+            <button id="btnSetSave" style="background:var(--success); color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;" onclick="saveSettingsValues()" disabled>Зберегти</button>
+            <button style="background:#fff; color:#4b5563; border:1px solid #cbd5e1; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;" onclick="resetSettingsValues()">Скасувати зміни</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:16px;">
+            <input id="searchSettingsInput" style="flex:1; border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:12px; outline:none;" type="text" placeholder="Пошук по параметрах..." oninput="renderSettingsTable()" />
+            <span id="settingsModeStatus" style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:800; background:#f3f4f6; color:#4b5563;">Режим перегляду</span>
+          </div>
+
+          <div class="table-wrap" style="max-height: 550px;">
+            <table id="paramsTable"></table>
+          </div>
+
+          <div style="margin-top: 10px; color: var(--muted); font-size: 11px;">У режимі редагування доступні тільки текстове поле "Дані:" та числове «Значення (вміст)».</div>
+          
+          <details style="margin-top:12px;">
+            <summary>Журнал редагування параметрів</summary>
+            <div id="settingsEventLog" class="log"></div>
+          </details>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // ОГОЛОШЕННЯ ГЛОБАЛЬНИХ ЗМІННИХ
+    var INITIAL_DB_BACKUP = []; 
+    var unifiedDatabase = [];   
+    var isHourlyTranslated = false; 
+
+    // СТАТУСИ КЕРІВНИКА
+    const STATUSES = [
+      { id: 'NEW', label: 'Нова', color: '#1890FF' },
+      { id: 'BONUS_IN_PROGRESS', label: 'В роботі', color: '#FAAD14' },
+      { id: 'BONUS_AGREED', label: 'Бонуси погоджено', color: '#a0d911' },
+      { id: 'SALARY_IN_PROGRESS', label: 'Зарплата на погодженні', color: '#FA8C16' },
+      { id: 'SALARY_AGREED', label: 'Зарплата погоджена', color: '#14AE5C' },
+      { id: 'SALARY_END', label: 'Відомість закрита', color: '#111827' } // Змінено на чорний
+    ];
+    var currentStatus = 'NEW';
+    
+    // СТАТУСИ НОМЕ-КЦ
+    const HKC_STATUS_MAP = {
+      'NEW': { label: 'Очікування звіту', color: '#6b7280' },
+      'BONUS_IN_PROGRESS': { label: 'Очікування звіту', color: '#6b7280' },
+      'BONUS_AGREED': { label: 'Бонуси погоджено', color: '#f97316' },
+      'SALARY_IN_PROGRESS': { label: 'Зарплата на погодженні', color: '#ef4444' },
+      'SALARY_AGREED': { label: 'Зарплату погоджено', color: '#10b981' },
+      'SALARY_END': { label: 'Відомість закрито', color: '#111827' }
+    };
+
+    var kupFlags = { of: false, sick: false, vacUsed: false, vacUnused: false };
+
+    // --- ЄДИНА ЛОГІКА ДОСТУПУ ДО РЕДАГУВАННЯ ПОЛІВ ---
+    function isEditable(fieldCode, view) {
+      if (view === 'hkc') {
+        if (fieldCode === 'base_salary' && (currentStatus === 'BONUS_AGREED' || currentStatus === 'SALARY_IN_PROGRESS')) return true;
+        if ((fieldCode === 'bonus_amount' || fieldCode === 'additional_adjustments') && currentStatus === 'SALARY_IN_PROGRESS') return true;
+      } else if (view === 'manager') {
+        if ((fieldCode === 'cash_paid' || fieldCode === 'advances') && currentStatus === 'SALARY_AGREED') return true;
+      }
+      return false;
+    }
+
+    function getHourlyWorkers() {
+      return unifiedDatabase.filter(r => r.payment_type === "Погодинна");
+    }
+
+    function copyCode(text, event) {
+      event.stopPropagation();
+      navigator.clipboard.writeText(text).then(() => {
+        const el = event.target;
+        el.textContent = "Скопійовано!"; el.style.color = "var(--success)";
+        setTimeout(() => { el.textContent = text; el.style.color = "var(--muted)"; }, 1200);
+      }).catch(err => console.error('Failed to copy: ', err));
+    }
+
+    // ==========================================
+    // 1. БАЗА ДАНИХ (ГЕНЕРАЦІЯ ЄДИНОЇ БАЗИ)
+    // ==========================================
+    function initDatabase() {
+      var surnamesList = ["Шевченко", "Іванов", "Коваленко", "Бондаренко", "Ткаченко", "Кравченко", "Павленко", "Петренко", "Харченко", "Мельник", "Поліщук", "Козак", "Олійник", "Руденко", "Жупанюк", "Чумак", "Слободян", "Курилов"];
+      var namesList = ["Андрій", "Олександр", "Сергій", "Дмитро", "Ігор", "Роман", "Артем", "Микола", "Володимир", "Наталія", "Олена", "Тетяна", "Марія", "Ірина", "Юлія"];
+      var patronymicsList = ["Миколайович", "Олександрович", "Петрович", "Сергійович", "Володимирович", "Василівна", "Миколаївна", "Петрівна", "Сергіївна"];
+      var staffRolesList = ["Провідний фахівець", "Фахівець з розвитку персоналу", "Фахівець з персоналу"];
+
+      let tempDb = [];
+      let firedHourlyCount = 0;
+      
+      let hkcFiredCount = 0;
+      const hkcFiredVacationDaysList = [5, 7, 10, 12, 20];
+      let hkcSickPayValues = [3500, 2000, 1500, 3000];
+      let hkcVacationUsedValues = [10, 10, 14, 14, 14];
+
+      for (let i = 0; i < 105; i++) {
+        let ln = surnamesList[i % surnamesList.length];
+        let fn = namesList[(i * 2) % namesList.length];
+        let pt = patronymicsList[(i * 3) % patronymicsList.length];
+        let fullName = `${ln} ${fn} ${pt}`;
+        
+        let isStaff = i < 21; 
+        let payment_type = isStaff ? "Штатна" : "Погодинна";
+        let position = isStaff ? staffRolesList[i % staffRolesList.length] : 'Фахівець Колл-центру "НОМЕ-КЦ"';
+
+        let dateFired = null;
+        let mockUnusedVacation = 0;
+        let mockSickPay = 0;
+        let mockVacationUsed = 0;
+        let lineObValue = (i % 4) + 1; 
+
+        if (!isStaff && firedHourlyCount < 5) {
+          dateFired = `15.07.2026`;
+          mockUnusedVacation = hkcFiredVacationDaysList[firedHourlyCount];
+          firedHourlyCount++;
+        } 
+        else if (!isStaff) {
+          if (hkcSickPayValues.length > 0) {
+            mockSickPay = hkcSickPayValues.pop();
+          } else if (hkcVacationUsedValues.length > 0) {
+            mockVacationUsed = hkcVacationUsedValues.pop();
+          }
+        }
+
+        let dateHired = `01.01.202${4 + (i % 3)}`;
+        let carryPast = (i % 11) - 5; 
+
+        let mockKccData = {
+          line_ob: lineObValue, time_work_fact: 110 + (i % 40), time_work_pre: (i % 3 === 0) ? 10 + (i % 10) : null,
+          interval_20_22_qua: 2 + (i % 10), line_eng_tab: (i % 2 === 0) ? 1 : 0, interval_23_07_qua: (i % 3 === 0) ? (i % 8) : null,
+          critical_errors_50_tab: i % 4, critical_errors_99_tab: i % 3, critical_errors_100_tab: i % 2, critical_errors_200_tab: 0,
+          call_status_p_hold: 0.01, call_status_hold: 0.02, call_status_c_card: 0, call_status_reg_app: 1, call_status_camp_work: 0.95,
+          place_ranking: 3 + (i % 5), qualification_pc_lock_tab: (i % 2 === 0) ? "Так" : null, qualification_camp_work_tab: (i % 3 === 0) ? "Так" : null,
+          qualification_pay_card_tab: (i % 4 === 0) ? "Так" : null, qualification_curr_exchenge_tab: (i % 5 === 0) ? "Так" : null,
+          qualification_chatbot_tab: (i % 6 === 0) ? "Так" : null, time_video_tab: i % 5, time_study_tab: i % 6,
+          number_thank_tab: (i % 7 === 0) ? 1 : null, number_mentor_tab: (i % 8 === 0) ? 1 : null,
+          bonus_training_tab: (i % 9 === 0) ? 1000 : null, bonus_friend_tab: (i % 10 === 0) ? 2000 : null
+        };
+
+        let emp = {
+          id: i + 1,
+          inn: "3" + String(i + 1).padStart(9, '0'), 
+          name_operator: fullName,
+          payment_type: payment_type,
+          position: position,
+          date_hired: dateHired,
+          date_fired: dateFired,
+          line_ob: lineObValue,
+          carryover_past: carryPast,
+          
+          base_salary: isStaff ? 12000 : 0, 
+          bonus_amount: 0, bonus_desc: "",
+          additional_adjustments: 0, additional_desc: "",
+          amount_due: 0, recommended_payout: '', cash_paid: null, cash_paid_log: [],
+          advances: 0, advances_log: [], yearly_salary_plan: null,
+          card_base_paid: 0, card_bonus_paid: 0,
+          total_earned: 0, total_paid_combined: 0, carryforward_next: 0,
+          
+          _mockKupVacationArrears: mockUnusedVacation,
+          _mockKupVacationUsed: mockVacationUsed,
+          _mockKupSickPay: mockSickPay,
+          vacation_arrears: 0,
+          vacation_cash: 0, 
+          vacation_used: 0, 
+          dismissal_cash: 0,
+          off_sick_pay: 0,
+          
+          time_work_fact: null, time_work_pre: null, time_work_total: null, interval_20_22_qua: null, line_eng_tab: null,
+          salary_sum_hour_tab: null, interval_23_07_qua: null, interval_23_07_sum: null, night_bonus_tab: null,
+          critical_errors_50_tab: null, critical_errors_99_tab: null, critical_errors_100_tab: null, critical_errors_200_tab: null,
+          sum_critical_errors_real: null, sum_critical_errors_kpi: null, salary_bonus_hour_tab: null, call_status_p_hold: null, call_status_hold: null,
+          call_status_c_card: null, call_status_reg_app: null, call_status_camp_work: null, coeff_status_p_hold_tab: null, coeff_status_hold_tab: null, coeff_status_card_tab: null, coeff_status_reg_app_tab: null, coeff_status_camp_work_tab: null, coeff_status_sum_tab: null,
+          place_ranking: null, coeff_quality_work_tab: null, total_coeff_stat_qua_tab: null, bonus_1st_place_tab: null, bonus_10_tab: null,
+          qualification_pc_lock_tab: null, qualification_pc_lock_tab_b: null, qualification_camp_work_tab: null, qualification_camp_work_tab_b: null,
+          qualification_pay_card_tab: null, qualification_pay_card_tab_b: null, qualification_curr_exchenge_tab: null, qualification_curr_exchenge_tab_b: null, qualification_chatbot_tab: null, qualification_chatbot_tab_b: null,
+          number_thank_tab: null, bonus_thank_tab: null, number_mentor_tab: null, bonus_mentor_tab: null,
+          bonus_training_tab: null, bonus_friend_tab: null, time_video_tab: null, bonus_video_tab: null,
+          time_study_tab: null, rate_study_tab: null, total_salary_tab: null, total_kpi_tab: null,
+          
+          _mockData: mockKccData
+        };
+
+        if (isStaff) {
+            emp.yearly_salary_plan = {1:12000, 2:12000, 3:12000, 4:12000, 5:12000, 6:12000, 7:12000, 8:12000, 9:0, 10:0, 11:0, 12:0};
+            emp.card_base_paid = 0;
+        }
+
+        tempDb.push(emp);
+      }
+      
+      INITIAL_DB_BACKUP = JSON.parse(JSON.stringify(tempDb));
+      unifiedDatabase = JSON.parse(JSON.stringify(tempDb));
+    }
+    initDatabase();
+
+
+    // ==========================================
+    // НАВІГАЦІЯ (SPA)
+    // ==========================================
+    function switchView(viewId) {
+      document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active-view'));
+      document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+
+      document.getElementById(`view-${viewId}`).classList.add('active-view');
+      document.getElementById(`menu-${viewId}`).classList.add('active');
+
+      if (viewId === 'manager') {
+          processAndRenderManager();
+      } else if (viewId === 'hourly') {
+          if(document.getElementById('step1').classList.contains('done')) renderHourlyTable();
+          else renderEmptyHourlyTable();
+      } else if (viewId === 'settings') {
+          renderSettingsTable();
+      } else if (viewId === 'hkc') {
+          processAndRenderHkc();
+      }
+    }
+
+    function toggleSidebar() {
+      const layout = document.getElementById('mainLayout');
+      const btn = document.querySelector('.sidebar-toggle-btn');
+      layout.classList.toggle('sidebar-collapsed');
+      btn.textContent = layout.classList.contains('sidebar-collapsed') ? "▶" : "◀";
+    }
+
+    function toggleFullscreenTable(cardId) {
+      const card = document.getElementById(cardId);
+      card.classList.toggle('fullscreen-mode');
+    }
+
+    // ==========================================
+    // 2. ЄДИНА МАТЕМАТИКА ДЛЯ ВСІЄЇ БАЗИ
+    // ==========================================
+    function calculateRowBaseTotals(row) {
+      row.card_bonus_paid = (row.vacation_cash || 0) + (row.dismissal_cash || 0) + (row.off_sick_pay || 0);
+      row.total_earned = Number(row.base_salary) + Number(row.bonus_amount) + Number(row.additional_adjustments) + Number(row.card_bonus_paid);
+      row.amount_due = row.total_earned - Number(row.card_base_paid) + Number(row.carryover_past);
+      
+      let safeCash = row.cash_paid !== null ? row.cash_paid : 0;
+      row.carryforward_next = row.amount_due - safeCash - Number(row.advances);
+      row.total_paid_combined = safeCash + Number(row.card_base_paid) + Number(row.card_bonus_paid) + Number(row.advances);
+    }
+
+
+    // ==========================================
+    // В'Ю 1.5: ЗАРПЛАТНА ВІДОМІСТЬ HOME-КЦ (HKC)
+    // ==========================================
+    var hkcCurrentSortCol = 'id';
+    var hkcSortAsc = true;
+
+    const HKC_COLUMNS = [
+      { code: 'id', label: 'ID', extOnly: false, bg: '' },
+      { code: 'inn', label: 'ІПН', extOnly: true, bg: 'bg-spec-gray' },
+      { code: 'name_operator', label: 'Працівник', extOnly: false, bg: '' },
+      { code: 'position', label: 'Посада', extOnly: true, bg: '' },
+      { code: 'hire_fire_dates', label: 'Прийнято/Звільнено', extOnly: false, bg: '' },
+      { code: 'base_salary', label: 'Ставка', extOnly: false, bg: 'bg-spec-blue' },
+      { code: 'bonus_amount', label: 'Бонус', extOnly: false, bg: 'bg-spec-blue' },
+      { code: 'additional_adjustments', label: 'Дод. вип.', extOnly: false, bg: 'bg-spec-blue' },
+      { code: 'vacation_used', label: 'К-ть днів використаної<br>відпустки', extOnly: true, bg: 'bg-spec-yellow' },
+      { code: 'vacation_cash', label: 'Відпускні доплата<br>управлінська', extOnly: true, bg: 'bg-spec-yellow' },
+      { code: 'vacation_arrears', label: 'К-ть днів невикористаної<br>відпустки', extOnly: true, bg: 'bg-spec-yellow' },
+      { code: 'dismissal_cash', label: 'Компенс. при звільненні<br>доплата управлінська', extOnly: true, bg: 'bg-spec-red' },
+      { code: 'off_sick_pay', label: 'Лікарняні виплачені оф', extOnly: true, bg: 'bg-spec-yellow' },
+      { code: 'total_earned', label: 'Всього зароблено', extOnly: false, bg: 'bg-spec-blue' },
+      { code: 'card_base_paid', label: 'ОФ ЗП', extOnly: false, bg: 'bg-spec-green' },
+      { code: 'advances', label: 'Аванс', extOnly: true, bg: 'bg-spec-yellow' },
+      { code: 'carryover_past', label: 'Сальдо на початок', extOnly: false, bg: 'bg-spec-gray' },
+      { code: 'amount_due', label: 'До видачі', extOnly: false, bg: 'bg-spec-blue' },
+      { code: 'recommended_payout', label: 'Рекомендовано до виплати', extOnly: false, bg: 'bg-spec-blue' },
+      { code: 'cash_paid', label: 'Виплачено', extOnly: false, bg: 'bg-spec-green' },
+      { code: 'carryforward_next', label: 'Залишок', extOnly: false, bg: 'bg-spec-yellow' }
+    ];
+
+    function hkcLoadOfZpFromKup() {
+      unifiedDatabase.forEach(row => {
+        if (!row.date_fired) { row.card_base_paid = row.payment_type === 'Штатна' ? 7100 : 4500; } 
+        else { row.card_base_paid = 1200; }
+      });
+      kupFlags.of = true;
+      processAndRenderHkc(); processAndRenderManager();
+    }
+
+    function hkcLoadSickPayFromKup() {
+      unifiedDatabase.forEach(row => {
+        if (!row.date_fired && row._mockKupSickPay > 0) { row.off_sick_pay = row._mockKupSickPay; }
+      });
+      kupFlags.sick = true;
+      processAndRenderHkc(); processAndRenderManager();
+    }
+
+    function hkcLoadVacationUsedFromKup() {
+      unifiedDatabase.forEach(row => {
+        if (!row.date_fired && row.off_sick_pay === 0 && row._mockKupVacationUsed > 0) {
+          row.vacation_used = row._mockKupVacationUsed;
+          let rate = 70; if (row.line_ob === 2) rate = 75; if (row.line_ob === 3) rate = 80; 
+          row.vacation_cash = ((176 * rate) / 30.44) * row.vacation_used;
+        }
+      });
+      kupFlags.vacUsed = true;
+      processAndRenderHkc(); processAndRenderManager();
+    }
+
+    function hkcLoadVacationUnusedFromKup() {
+      unifiedDatabase.forEach(row => {
+        if (row.date_fired && row._mockKupVacationArrears > 0) {
+          row.vacation_arrears = row._mockKupVacationArrears;
+          let rate = 70; if (row.line_ob === 2) rate = 75; if (row.line_ob === 3) rate = 80;
+          row.dismissal_cash = ((176 * rate) / 30.44) * row.vacation_arrears;
+        }
+      });
+      kupFlags.vacUnused = true;
+      processAndRenderHkc(); processAndRenderManager();
+    }
+
+    function advanceHkcWorkflow() {
+      if (currentStatus === 'BONUS_AGREED') {
+          currentStatus = 'SALARY_IN_PROGRESS';
+      } else if (currentStatus === 'SALARY_IN_PROGRESS') {
+          currentStatus = 'SALARY_AGREED';
+      }
+      processAndRenderManager();
+      processAndRenderHkc();
+    }
+
+    // НОВІ ФУНКЦІЇ ЗВОРОТНЬОГО ЗВ'ЯЗКУ
+    function hkcReturnToManager() {
+        if(!confirm("Ви впевнені, що хочете повернути відомість керівнику?")) return;
+        currentStatus = 'BONUS_IN_PROGRESS';
+        processAndRenderManager();
+        if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+    function hkcReturnToProcess() {
+        if(!confirm("Ви впевнені, що хочете повернути на опрацювання (на крок назад)?")) return;
+        currentStatus = 'BONUS_AGREED';
+        processAndRenderManager();
+        if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+    function handleHkcSort(colCode) {
+      if (hkcCurrentSortCol === colCode) hkcSortAsc = !hkcSortAsc;
+      else { hkcCurrentSortCol = colCode; hkcSortAsc = true; }
+      processAndRenderHkc();
+    }
+
+    function handleHkcFiltersChange() { processAndRenderHkc(); }
+
+    function processAndRenderHkc() {
+      unifiedDatabase.forEach(calculateRowBaseTotals);
+
+      const hkcStatus = HKC_STATUS_MAP[currentStatus];
+      const isWaiting = hkcStatus.label === 'Очікування звіту'; 
+      const allowedInWaiting = ['id', 'inn', 'name_operator', 'position', 'hire_fire_dates', 'carryover_past'];
+
+      const badge = document.getElementById('hkcStatusBadge');
+      badge.textContent = hkcStatus.label;
+      badge.style.backgroundColor = hkcStatus.color;
+      
+      const btnWf = document.getElementById('hkcWorkflowBtn');
+      const btnKupOf = document.getElementById('hkcBtnLoadKUP_OF');
+      const btnKupSick = document.getElementById('hkcBtnLoadKUP_Sick');
+      const btnKupVacU = document.getElementById('hkcBtnLoadKUP_VacUsed');
+      const btnKupVacUn = document.getElementById('hkcBtnLoadKUP_VacUnused');
+      
+      const btnReturnManager = document.getElementById('hkcBtnReturnToManager');
+      const btnReturnProcess = document.getElementById('hkcBtnReturnToProcess');
+      const btnExport = document.getElementById('hkcBtnExport');
+
+      btnWf.style.display = 'none'; btnKupOf.style.display = 'none'; btnKupSick.style.display = 'none'; btnKupVacU.style.display = 'none'; btnKupVacUn.style.display = 'none';
+      btnReturnManager.style.display = 'none'; btnReturnProcess.style.display = 'none';
+
+      // Логіка кнопок експорту
+      if (currentStatus !== 'NEW' && currentStatus !== 'BONUS_IN_PROGRESS') {
+          btnExport.disabled = false; btnExport.style.backgroundColor = '#16a34a'; btnExport.style.color = '#fff';
+      } else {
+          btnExport.disabled = true; btnExport.style.backgroundColor = '#e5e7eb'; btnExport.style.color = '#9ca3af';
+      }
+
+      if (currentStatus === 'BONUS_AGREED') {
+          btnWf.style.display = 'inline-block';
+          btnWf.textContent = 'Опрацьовано';
+          btnWf.style.backgroundColor = '#3b82f6';
+          
+          btnReturnManager.style.display = 'inline-block'; // Додана кнопка повернення
+
+          let allKupLoaded = kupFlags.of && kupFlags.sick && kupFlags.vacUsed && kupFlags.vacUnused;
+          btnWf.disabled = !allKupLoaded;
+          btnWf.title = allKupLoaded ? "" : "Очікується завантаження всіх даних з КУП";
+
+          btnKupOf.style.display = 'inline-block'; btnKupSick.style.display = 'inline-block'; btnKupVacU.style.display = 'inline-block'; btnKupVacUn.style.display = 'inline-block';
+
+          if(kupFlags.of) { btnKupOf.disabled = true; btnKupOf.textContent = 'ОФ ЗП (Завантажено)'; } else { btnKupOf.disabled = false; btnKupOf.textContent = 'ОФ ЗП з КУП'; }
+          if(kupFlags.sick) { btnKupSick.disabled = true; btnKupSick.textContent = 'Лікарняні (Завантажено)'; } else { btnKupSick.disabled = false; btnKupSick.textContent = 'Лікарняні з КУП'; }
+          if(kupFlags.vacUsed) { btnKupVacU.disabled = true; btnKupVacU.textContent = 'Відпускні вик. (Завантажено)'; } else { btnKupVacU.disabled = false; btnKupVacU.textContent = 'Відпускні використані з КУП'; }
+          if(kupFlags.vacUnused) { btnKupVacUn.disabled = true; btnKupVacUn.textContent = 'Відпускні невикр. (Завантажено)'; } else { btnKupVacUn.disabled = false; btnKupVacUn.textContent = 'Відпускні не використані з КУП'; }
+      } 
+      else if (currentStatus === 'SALARY_IN_PROGRESS') {
+          btnWf.style.display = 'inline-block';
+          btnWf.textContent = 'Погоджено';
+          btnWf.style.backgroundColor = '#10b981'; 
+          btnWf.disabled = false;
+          btnWf.title = "";
+          
+          btnReturnProcess.style.display = 'inline-block'; // Додана кнопка повернення
+      }
+
+      const sName = document.getElementById('hkcSearchName').value.trim().toLowerCase();
+      const sInn = document.getElementById('hkcSearchINN').value.trim();
+      const viewMode = document.getElementById('hkcTableView').value;
+      const fFired = document.getElementById('hkcFilterFired').value;
+      const fType = document.getElementById('hkcFilterType').value;
+      const fVacation = document.getElementById('hkcFilterVacation').value;
+      const fSick = document.getElementById('hkcFilterSick').value;
+      
+      const roundMode = document.getElementById('roundingMode').value;
+      let roundVal = roundMode === 'none' ? 0 : parseInt(roundMode);
+      document.getElementById('hkcRounding').textContent = roundMode === 'none' ? 'Як є' : `До ${roundMode}`;
+
+      let filtered = [];
+      let mTotEmp = 0, mFired = 0, mTotRec = 0, mTotDue = 0, mTotOff = 0, mTotCarry = 0, mTotDism = 0, mTotPaid = 0;
+
+      unifiedDatabase.forEach(row => row.recommended_payout = '');
+
+      unifiedDatabase.forEach(row => {
+        let matchName = !sName || row.name_operator.toLowerCase().includes(sName);
+        let matchInn = !sInn || row.inn.includes(sInn);
+        let matchType = fType === 'all' || row.payment_type === fType;
+        let matchFired = fFired === 'all' || (fFired === 'fired' && row.date_fired) || (fFired === 'working' && !row.date_fired);
+        let matchVacation = (fVacation === 'all') || (fVacation === 'yes' && row.vacation_used > 0) || (fVacation === 'no' && (!row.vacation_used || row.vacation_used === 0));
+        let matchSick = (fSick === 'all') || (fSick === 'yes' && row.off_sick_pay > 0) || (fSick === 'no' && (!row.off_sick_pay || row.off_sick_pay === 0));
+
+        if (matchName && matchInn && matchType && matchFired && matchVacation && matchSick) {
+          filtered.push(row);
+          mTotEmp++;
+          if (row.date_fired) mFired++;
+        }
+      });
+
+      filtered.forEach(row => {
+        if (row.cash_paid === null || row.cash_paid === 0) {
+          if (row.date_fired || roundMode === 'none') {
+            row.recommended_payout = Number(row.amount_due.toFixed(2));
+          } else {
+            let multiple = Number(roundMode);
+            row.recommended_payout = Math.round(row.amount_due / multiple) * multiple;
+          }
+        }
+        
+        if (!isWaiting) {
+           mTotRec += (row.recommended_payout !== '' ? Number(row.recommended_payout) : 0);
+           mTotDue += row.amount_due;
+           mTotOff += row.card_base_paid; 
+           mTotDism += row.dismissal_cash;
+           mTotPaid += (row.cash_paid || 0);
+        }
+        mTotCarry += row.carryover_past;
+      });
+
+      const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      document.getElementById('hkcTotalEmp').textContent = mTotEmp;
+      document.getElementById('hkcFiredCount').textContent = mFired;
+      document.getElementById('hkcTotalRec').textContent = fmt.format(mTotRec);
+      document.getElementById('hkcTotalDue').textContent = fmt.format(mTotDue);
+      document.getElementById('hkcTotalOfficial').textContent = fmt.format(mTotOff);
+      document.getElementById('hkcTotalCarryover').textContent = fmt.format(mTotCarry);
+      document.getElementById('hkcTotalDismissal').textContent = fmt.format(mTotDism);
+      document.getElementById('hkcTotalPaid').textContent = fmt.format(mTotPaid);
+
+      filtered.sort((a, b) => {
+        let vA = a[hkcCurrentSortCol]; let vB = b[hkcCurrentSortCol];
+        if(typeof vA === 'string') vA = vA.toLowerCase();
+        if(typeof vB === 'string') vB = vB.toLowerCase();
+        if (vA < vB) return hkcSortAsc ? -1 : 1;
+        if (vA > vB) return hkcSortAsc ? 1 : -1;
+        return 0;
+      });
+
+      let activeCols = HKC_COLUMNS.filter(c => {
+          if (viewMode === 'short') {
+              const hideInShort = ['id', 'inn', 'position', 'vacation_arrears', 'vacation_cash', 'vacation_used', 'dismissal_cash', 'off_sick_pay'];
+              if (hideInShort.includes(c.code)) return false;
+          }
+          return true;
+      });
+
+      const thead = `<tr>${activeCols.map(c => {
+        let sortMark = hkcCurrentSortCol === c.code ? (hkcSortAsc ? '<span class="sort-icon">▲</span>' : '<span class="sort-icon">▼</span>') : '';
+        let stickyStr = '';
+        if(c.code === 'id') stickyStr = `class="sticky-cell ${c.bg}" style="left: 0px; min-width:40px;"`;
+        if(c.code === 'inn') stickyStr = `class="sticky-cell ${c.bg}" style="left: 40px; min-width:80px;"`;
+        if(c.code === 'name_operator') stickyStr = `class="sticky-cell sticky-shadow ${c.bg}" style="left: ${viewMode==='extended' ? 120 : (activeCols.find(x=>x.code==='inn') ? 120 : 0)}px; min-width:200px;"`;
+        if (c.code === 'name_operator' && viewMode === 'short') stickyStr = `class="sticky-cell sticky-shadow ${c.bg}" style="left: 0px; min-width:200px;"`;
+        
+        return `<th ${stickyStr || `class="${c.bg}"`} onclick="handleHkcSort('${c.code}')">
+                  ${c.label}${sortMark}
+                  <span class="code" onclick="copyCode('${c.code}', event)">${c.code}</span>
+                </th>`;
+      }).join('')}</tr>`;
+
+      const tbody = filtered.map(row => {
+        let isFired = row.date_fired ? 'fired-row' : '';
+        const rIdx = unifiedDatabase.findIndex(orig => orig.id === row.id);
+        
+        let cells = activeCols.map(c => {
+          let val = row[c.code];
+
+          if (isWaiting && !allowedInWaiting.includes(c.code)) val = null;
+
+          let stickyStr = '';
+          if(c.code === 'id') stickyStr = `class="sticky-cell ${c.bg}" style="left: 0px; min-width:40px;"`;
+          if(c.code === 'inn') stickyStr = `class="sticky-cell ${c.bg}" style="left: 40px; min-width:80px;"`;
+          if (c.code === 'name_operator' && viewMode === 'short') stickyStr = `class="sticky-cell sticky-shadow ${c.bg}" style="left: 0px; min-width:200px;"`;
+          else if(c.code === 'name_operator') stickyStr = `class="sticky-cell sticky-shadow ${c.bg}" style="left: 120px; min-width:200px;"`;
+
+          if (c.code === 'name_operator') return `<td ${stickyStr}><strong>${val}</strong></td>`;
+          if (c.code === 'hire_fire_dates') {
+            if (isWaiting && !allowedInWaiting.includes(c.code)) return `<td><span class="empty">—</span></td>`; 
+            return `<td><div style="font-size:10px;"><span style="color:#15803d; font-weight:700;">Пр: ${row.date_hired}</span>${row.date_fired ? `<br><span style="color:#b91c1c; font-weight:700;">Зв: ${row.date_fired}</span>` : ''}</div></td>`;
+          }
+          if (c.code === 'inn') return `<td ${stickyStr} style="font-family:monospace; color:#4b5563;">${val}</td>`;
+          
+          if (typeof val === 'number') val = val.toFixed(2);
+          if (val === null || val === undefined || val === '') val = '<span class="empty">—</span>';
+
+          if (c.code === 'base_salary' && val !== '<span class="empty">—</span>') {
+              let editable = isEditable('base_salary', 'hkc');
+              if (row.payment_type === 'Штатна') {
+                  return `<td class="${c.bg}"><span class="interactive-link" onclick="openSalaryPlanModal(${rIdx}, ${!editable})">${val} грн</span></td>`;
+              } else {
+                  return `<td class="${c.bg}"><span class="interactive-link" onclick="openHourlySalaryModal(${rIdx})">${val} грн</span></td>`;
+              }
+          }
+          if (c.code === 'bonus_amount' && val !== '<span class="empty">—</span>') {
+              let editable = isEditable('bonus_amount', 'hkc');
+              if (row.payment_type === 'Штатна') {
+                  if (editable && row.bonus_amount === 0) return `<td class="${c.bg}"><button class="btn-add-bonus" onclick="openStaffBonusModal(${rIdx}, false)">+ Додати</button></td>`;
+                  return `<td class="${c.bg}"><span class="interactive-link" onclick="openStaffBonusModal(${rIdx}, ${!editable})">${val} грн</span></td>`;
+              } else {
+                  return `<td class="${c.bg}"><span class="interactive-link" onclick="openHourlyBonusModal(${rIdx})">${val} грн</span></td>`;
+              }
+          }
+          if (c.code === 'additional_adjustments' && val !== '<span class="empty">—</span>') {
+              let editable = isEditable('additional_adjustments', 'hkc');
+              let display = row.additional_adjustments !== 0 ? val : (editable ? '+ Кор.' : '—');
+              if (row.additional_adjustments !== 0 || editable) {
+                  return `<td class="${c.bg}"><span class="interactive-link" onclick="openAdditionalModal(${rIdx}, ${!editable})">${display}</span></td>`;
+              }
+              return `<td class="${c.bg}">—</td>`;
+          }
+
+          let fw = ['total_earned', 'amount_due', 'recommended_payout', 'carryforward_next'].includes(c.code) ? 'font-weight:800;' : '';
+
+          return `<td ${stickyStr || `class="${c.bg}"`} style="${fw}">${val}</td>`;
+        }).join('');
+        return `<tr class="${isFired}">${cells}</tr>`;
+      }).join('');
+
+      document.getElementById('hkcPayrollTable').innerHTML = `<thead>${thead}</thead><tbody>${tbody || '<tr><td colspan="21" style="text-align:center; padding:20px;">Немає даних</td></tr>'}</tbody>`;
+    }
+
+    // ==========================================
+    // В'Ю 1: ЗАРПЛАТНА ВІДОМІСТЬ КЕРІВНИКА (MANAGER)
+    // ==========================================
+    var currentSortColumn = null; var currentSortDirection = 'asc'; var currentPage = 1;
+    var activeEditingIndex = null;
+
+    const generalColumns = [
+      {"code": "name_operator", "label": "ПІП", "bg": ""},
+      {"code": "position", "label": "Посада", "bg": ""},
+      {"code": "hire_fire_dates", "label": "Прийнято/<br>Звільнено", "bg": ""},
+      {"code": "payment_type", "label": "Тип", "bg": ""},
+      {"code": "carryover_past", "label": "Перенос<br>з минулого", "bg": "bg-spec-gray"},
+      {"code": "amount_due", "label": "До видачі", "bg": "bg-spec-blue"},
+      {"code": "recommended_payout", "label": "Рекомендовано", "bg": "bg-spec-blue"},
+      {"code": "cash_paid", "label": "Видано", "bg": "bg-spec-blue"},
+      {"code": "advances", "label": "Аванси", "bg": "bg-spec-yellow"},
+      {"code": "carryforward_next", "label": "Залишок", "bg": "bg-spec-yellow"},
+      {"code": "base_salary", "label": "Ставка", "bg": "bg-spec-blue"},
+      {"code": "bonus_amount", "label": "Бонус", "bg": "bg-spec-blue"},
+      {"code": "additional_adjustments", "label": "Додатково", "bg": "bg-spec-blue"},
+      {"code": "total_earned", "label": "Всього зароблено", "bg": "bg-spec-blue"},
+      {"code": "card_base_paid", "label": "На карту", "bg": "bg-spec-green"},
+      {"code": "card_bonus_paid", "label": "На карту премії", "bg": "bg-spec-green"},
+      {"code": "total_paid_combined", "label": "Всього видано", "bg": "bg-spec-blue"}
+    ];
+
+    function advanceWorkflow() {
+      if (currentStatus === 'NEW') currentStatus = 'BONUS_IN_PROGRESS';
+      else if (currentStatus === 'BONUS_IN_PROGRESS') {
+          currentStatus = 'BONUS_AGREED';
+          kupFlags = { of: false, sick: false, vacUsed: false, vacUnused: false };
+      }
+      else if (currentStatus === 'BONUS_AGREED') currentStatus = 'SALARY_IN_PROGRESS';
+      else if (currentStatus === 'SALARY_IN_PROGRESS') currentStatus = 'SALARY_AGREED';
+      else if (currentStatus === 'SALARY_AGREED') {
+          if (!checkAllPaid()) { alert("Необхідно заповнити поле 'Видано' для всіх працівників!"); return; }
+          currentStatus = 'SALARY_END';
+      }
+      else if (currentStatus === 'SALARY_END') {
+          resetGeneralSimulation();
+          currentStatus = 'NEW';
+      }
+      
+      processAndRenderManager();
+      if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+    // НОВА ФУНКЦІЯ: Повернення на редагування (збереження даних, скидання фінальних розрахунків)
+    function returnToHourlyEdit() {
+      if(!confirm("Ви впевнені, що хочете повернути на редагування? Розрахунки будуть скинуті, але всі введені дані та файли збережуться.")) return;
+      
+      hourlyCalculated = false;
+      hourlyTotalCalculated = false;
+      isHourlyTranslated = false;
+      
+      document.getElementById('step4').className = 'step-btn pending';
+      document.getElementById('step5').className = 'step-btn disabled';
+      document.getElementById('step6').className = 'step-btn disabled';
+      
+      document.getElementById('hourlyTotalSalary').textContent = '—';
+      setHourlyStatus('Повернено на редагування', 'badge-info');
+      hourlyLog('Повернення', 'Керівник повернув процес на перевірку та коригування даних.');
+      
+      switchView('hourly');
+    }
+
+    function checkAllPaid() { return unifiedDatabase.every(r => r.cash_paid !== null); }
+
+    function renderWorkflowUI() {
+      const statusBadge = document.getElementById('statusBadge');
+      const wfBtn = document.getElementById('workflowBtn');
+      const exportBtn = document.getElementById('btnExport');
+      const autoPayoutBtn = document.getElementById('autoPayoutBtn');
+      const btnReturnEdit = document.getElementById('btnReturnToEdit');
+      
+      const filtersAllowed = (currentStatus === 'BONUS_IN_PROGRESS' || currentStatus === 'SALARY_AGREED');
+      const statusConfig = STATUSES.find(s => s.id === currentStatus);
+      statusBadge.textContent = statusConfig.label;
+      statusBadge.style.backgroundColor = statusConfig.color;
+
+      document.querySelectorAll('#view-manager .filter-input').forEach(el => el.disabled = !filtersAllowed);
+
+      // Кнопка Експорту
+      if (currentStatus === 'NEW') {
+          exportBtn.disabled = true; exportBtn.style.backgroundColor = '#DEFBED'; exportBtn.style.color = '#15803d'; exportBtn.style.cursor = 'not-allowed';
+      } else {
+          exportBtn.disabled = false; exportBtn.style.backgroundColor = '#16a34a'; exportBtn.style.color = '#fff'; exportBtn.style.cursor = 'pointer';
+      }
+
+      // Кнопка повернення (тільки в роботі)
+      btnReturnEdit.style.display = (currentStatus === 'BONUS_IN_PROGRESS') ? 'inline-block' : 'none';
+      autoPayoutBtn.style.display = (currentStatus === 'SALARY_AGREED') ? 'inline-block' : 'none';
+
+      wfBtn.style.display = 'inline-block';
+      wfBtn.disabled = false; wfBtn.style.cursor = 'pointer'; wfBtn.title = "";
+
+      if (currentStatus === 'NEW') { 
+          wfBtn.textContent = 'Розпочати'; 
+          wfBtn.style.backgroundColor = '#1890FF'; 
+      }
+      else if (currentStatus === 'BONUS_IN_PROGRESS') { 
+          wfBtn.textContent = 'Бонуси погоджено'; 
+          if (!isHourlyTranslated) {
+              wfBtn.style.backgroundColor = 'var(--primary)';
+              wfBtn.style.cursor = 'not-allowed';
+              wfBtn.disabled = true;
+              wfBtn.title = 'Очікується трансляція даних зі сторінки Погодинників';
+          } else {
+              wfBtn.style.backgroundColor = '#16a34a'; // Зелений згідно завдання
+          }
+      }
+      else if (currentStatus === 'BONUS_AGREED' || currentStatus === 'SALARY_IN_PROGRESS') { 
+          wfBtn.style.display = 'none'; // Приховано, бо керує НОМЕ-КЦ
+      }
+      else if (currentStatus === 'SALARY_AGREED') {
+          wfBtn.textContent = 'Зарплату видано';
+          if (checkAllPaid()) { wfBtn.style.backgroundColor = '#D71B1B'; }
+          else { wfBtn.style.backgroundColor = '#FFBCBC'; wfBtn.style.cursor = 'not-allowed'; wfBtn.disabled = true; }
+      }
+      else if (currentStatus === 'SALARY_END') { 
+          wfBtn.style.display = 'none'; // Прибрано кнопку "Оновити дані"
+      }
+    }
+
+    function processAndRenderManager() {
+      unifiedDatabase.forEach(calculateRowBaseTotals);
+
+      const typeFilterMode = document.getElementById('filterType').value;
+      const payoutFilterMode = document.getElementById('filterPayout').value;
+      const firedFilterMode = document.getElementById('filterFired').value;
+      const searchQuery = document.getElementById('searchName').value.trim().toLowerCase();
+      const roundMode = document.getElementById('roundingMode').value;
+
+      let filteredRows = unifiedDatabase.filter(row => {
+        if (searchQuery.length >= 3 && !row.name_operator.toLowerCase().includes(searchQuery)) return false;
+        if (typeFilterMode !== 'all' && row.payment_type !== typeFilterMode) return false;
+        if (firedFilterMode === 'only_released' && !row.date_fired) return false;
+        if (firedFilterMode === 'only_working' && row.date_fired) return false;
+        
+        let hasBeenPaid = (row.cash_paid !== null && row.cash_paid > 0);
+        if (payoutFilterMode === 'paid' && !hasBeenPaid) return false;
+        if (payoutFilterMode === 'unpaid' && hasBeenPaid) return false;
+        return true;
+      });
+
+      unifiedDatabase.forEach(row => row.recommended_payout = '');
+
+      filteredRows.forEach(row => {
+        if (row.cash_paid === null || row.cash_paid === 0) {
+          if (row.date_fired || roundMode === 'none') {
+            row.recommended_payout = Number(row.amount_due.toFixed(2));
+          } else {
+            let multiple = Number(roundMode);
+            row.recommended_payout = Math.round(row.amount_due / multiple) * multiple;
+          }
+        }
+      });
+
+      updateMetricsBar();
+      updateAutoPayoutButtonState(filteredRows, roundMode);
+      renderWorkflowUI();
+
+      const rowLimitMode = document.getElementById('rowLimit').value;
+      const paginationNav = document.getElementById('paginationNav');
+      let displayedRows = filteredRows;
+      paginationNav.innerHTML = ""; 
+
+      if (rowLimitMode !== 'all' && filteredRows.length > 0) {
+        const limit = parseInt(rowLimitMode);
+        const totalPages = Math.ceil(filteredRows.length / limit);
+        if (currentPage > totalPages) currentPage = totalPages || 1;
+        displayedRows = filteredRows.slice((currentPage - 1) * limit, currentPage * limit);
+
+        if (totalPages > 1) {
+          for (let i = 1; i <= totalPages; i++) {
+            paginationNav.innerHTML += `<span class="page-link ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</span>`;
+          }
+        }
+      }
+
+      renderTableHTML(displayedRows);
+    }
+
+    function updateAutoPayoutButtonState(filteredRows, roundMode) {
+      const btn = document.getElementById('autoPayoutBtn');
+      const roundingModeEl = document.getElementById('roundingMode');
+      if (currentStatus !== 'SALARY_AGREED') return;
+
+      if (!filteredRows || filteredRows.length === 0) {
+          btn.disabled = true; btn.style.background = "#9ca3af"; roundingModeEl.disabled = false; return;
+      }
+
+      let hasAutoPaidInView = filteredRows.some(r => r._auto_paid === true);
+      let hasPendingPayoutInView = filteredRows.some(r => r.recommended_payout !== '' && Number(r.recommended_payout) >= 0);
+
+      if (hasAutoPaidInView) {
+        btn.textContent = "Повернути Видачу"; btn.style.background = "#dc2626"; btn.disabled = false; roundingModeEl.disabled = true;
+      } else {
+        btn.textContent = "Видати з рекомендованого"; btn.style.background = "#16a34a"; roundingModeEl.disabled = false;
+        if (roundMode === 'none' || !hasPendingPayoutInView) {
+          btn.disabled = true; btn.style.background = "#9ca3af"; btn.title = "Оберіть округлення та переконайтеся, що є працівники для видачі";
+        } else {
+          btn.disabled = false; btn.title = "";
+        }
+      }
+    }
+
+    function toggleAutoPayout() {
+      const typeFilterMode = document.getElementById('filterType').value;
+      const payoutFilterMode = document.getElementById('filterPayout').value;
+      const firedFilterMode = document.getElementById('filterFired').value;
+      const searchQuery = document.getElementById('searchName').value.trim().toLowerCase();
+
+      let targetRows = unifiedDatabase.filter(row => {
+        if (searchQuery.length >= 3 && !row.name_operator.toLowerCase().includes(searchQuery)) return false;
+        if (typeFilterMode !== 'all' && row.payment_type !== typeFilterMode) return false;
+        if (firedFilterMode === 'only_released' && !row.date_fired) return false;
+        if (firedFilterMode === 'only_working' && row.date_fired) return false;
+        let hasBeenPaid = (row.cash_paid !== null && row.cash_paid > 0);
+        if (payoutFilterMode === 'paid' && !hasBeenPaid) return false;
+        if (payoutFilterMode === 'unpaid' && hasBeenPaid) return false;
+        return true;
+      });
+
+      let isUndoing = targetRows.some(r => r._auto_paid === true);
+
+      if (isUndoing) {
+        targetRows.forEach(row => {
+          if (row._auto_paid) {
+            row.cash_paid = row._backup_cash !== undefined ? row._backup_cash : null;
+            row.cash_paid_log = row._backup_log || [];
+            delete row._backup_cash; delete row._backup_log; delete row._auto_paid;
+          }
+        });
+      } else {
+        targetRows.forEach(row => {
+          let payout = row.recommended_payout !== '' ? Number(row.recommended_payout) : 0;
+          if (row.cash_paid === null || row.cash_paid === 0) {
+            row._backup_cash = row.cash_paid;
+            row._backup_log = JSON.parse(JSON.stringify(row.cash_paid_log));
+            row._auto_paid = true;
+            row.cash_paid = payout; 
+            const now = new Date();
+            const dateStr = String(now.getDate()).padStart(2, '0') + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + now.getFullYear() + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            row.cash_paid_log.push({ date: dateStr, user: "Авто-видача", amount: payout, comment: "Масова видача з рекомендованого" });
+          }
+        });
+      }
+      processAndRenderManager();
+    }
+
+    function handleFiltersChange() { currentPage = 1; processAndRenderManager(); }
+
+    function updateMetricsBar() {
+      let staff = unifiedDatabase.filter(r => r.payment_type === 'Штатна').length;
+      let hourly = unifiedDatabase.filter(r => r.payment_type === 'Погодинна').length;
+      let fired = unifiedDatabase.filter(r => r.date_fired).length;
+      
+      let sumAmountDue = unifiedDatabase.reduce((sum, r) => sum + r.amount_due, 0);
+      let sumCashPaid = unifiedDatabase.reduce((sum, r) => sum + (r.cash_paid !== null ? r.cash_paid : 0), 0);
+      let sumRecommended = unifiedDatabase.reduce((sum, r) => sum + (r.recommended_payout !== '' ? Number(r.recommended_payout) : 0), 0);
+      let sumEarned = unifiedDatabase.reduce((sum, r) => sum + r.total_earned, 0);
+      let sumCarryforward = unifiedDatabase.reduce((sum, r) => sum + r.carryforward_next, 0);
+
+      document.getElementById('staffCount').textContent = staff;
+      document.getElementById('hourlyCount').textContent = hourly;
+      document.getElementById('generalOperatorsCount').textContent = unifiedDatabase.length;
+      document.getElementById('firedCount').textContent = fired;
+
+      const formatter = new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH', maximumFractionDigits: 0 });
+      document.getElementById('totalAmountDue').textContent = formatter.format(sumAmountDue);
+      document.getElementById('totalCashPaid').textContent = formatter.format(sumCashPaid);
+      document.getElementById('totalRecommended').textContent = formatter.format(sumRecommended);
+      document.getElementById('totalEarned').textContent = formatter.format(sumEarned);
+      document.getElementById('totalCarryforward').textContent = formatter.format(sumCarryforward);
+    }
+
+    function openSalaryPlanModal(idx, isReadOnly) {
+      const row = unifiedDatabase[idx];
+      const months = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+      
+      let disabledAttr = isReadOnly ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : '';
+      let btnHtml = isReadOnly ? '' : `<button class="btn-fullscreen" style="width:100%; background:#0284c7; color:#fff; border:none; padding:8px; border-radius:4px; margin-top:8px;" onclick="saveSalaryPlan(${idx})">Затвердити план</button>`;
+
+      let tableRows = months.map((m, i) => `<tr><td>${m}</td><td><input type="number" class="manual-input" style="width:120px;" id="mPlan_${i+1}" value="${row.yearly_salary_plan[i+1]}" ${disabledAttr} /></td></tr>`).join('');
+      document.getElementById('modalTitle').textContent = `План ставки на 2026 рік: ${row.name_operator}`;
+      document.getElementById('modalBody').innerHTML = `
+        <table class="excel-mock-table"><thead><tr><th>Місяць</th><th>Ставка</th></tr></thead><tbody>${tableRows}</tbody></table>
+        ${btnHtml}
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function saveSalaryPlan(idx) {
+      for(let i=1; i<=12; i++) { unifiedDatabase[idx].yearly_salary_plan[i] = Number(document.getElementById(`mPlan_${i}`).value) || 0; }
+      unifiedDatabase[idx].base_salary = unifiedDatabase[idx].yearly_salary_plan[6];
+      closeBonusModal(); 
+      processAndRenderManager();
+      if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+    function openStaffBonusModal(idx, isReadOnly) {
+      activeEditingIndex = idx; const row = unifiedDatabase[idx];
+      document.getElementById('modalTitle').textContent = `Премія: ${row.name_operator}`;
+      
+      let disabledAttr = isReadOnly ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : '';
+      let btnHtml = isReadOnly ? '' : `<button class="btn-primary" style="width:100%; padding:8px; background:#16a34a; color:#fff; border:none; cursor:pointer; border-radius:4px;" onclick="saveStaffBonus()">Зберегти</button>`;
+
+      document.getElementById('modalBody').innerHTML = `
+        <input type="number" id="modalBonusSum" class="input-modal-style" value="${row.bonus_amount || ''}" placeholder="Сума..." ${disabledAttr} />
+        <textarea id="modalBonusDesc" class="input-modal-style" style="height:60px;" placeholder="Причина..." ${disabledAttr}>${row.bonus_desc}</textarea>
+        ${btnHtml}
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function saveStaffBonus() {
+      const sum = Number(document.getElementById('modalBonusSum').value) || 0;
+      const desc = document.getElementById('modalBonusDesc').value.trim();
+      if (sum > 0 && desc === "") { alert("Опис обов'язковий!"); return; }
+      unifiedDatabase[activeEditingIndex].bonus_amount = sum; unifiedDatabase[activeEditingIndex].bonus_desc = desc;
+      closeBonusModal(); 
+      processAndRenderManager();
+      if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+    function openAdditionalModal(idx, isReadOnly) {
+      activeEditingIndex = idx; const row = unifiedDatabase[idx];
+      document.getElementById('modalTitle').textContent = `Додаткові коригування ЗП`;
+      
+      let disabledAttr = isReadOnly ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : '';
+      let btnHtml = isReadOnly ? '' : `<button class="btn-primary" style="width:100%; padding:8px; cursor:pointer; background:#0284c7; color:#fff; border:none; border-radius:4px;" onclick="saveAdditional()">Зберегти</button>`;
+
+      document.getElementById('modalBody').innerHTML = `
+        <input type="number" id="addAmt" class="input-modal-style" value="${row.additional_adjustments || ''}" placeholder="Сума (+/-)..." ${disabledAttr} />
+        <input type="text" id="addDesc" class="input-modal-style" value="${row.additional_desc}" placeholder="Причина..." ${disabledAttr} />
+        ${btnHtml}
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function saveAdditional() {
+      const amt = Number(document.getElementById('addAmt').value) || 0;
+      const desc = document.getElementById('addDesc').value.trim();
+      if(amt !== 0 && desc === "") { alert("Опис коригування обов'язковий!"); return; }
+      unifiedDatabase[activeEditingIndex].additional_adjustments = amt; unifiedDatabase[activeEditingIndex].additional_desc = desc;
+      closeBonusModal(); 
+      processAndRenderManager();
+      if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+    function openCashPaidModal(idx) {
+      const row = unifiedDatabase[idx];
+      const autoComment = "Видано зарплату";
+      let logRows = row.cash_paid_log.map(l => `<tr><td>${l.date}</td><td>${l.user}</td><td>${l.amount.toFixed(2)}</td><td>${l.comment}</td></tr>`).join('');
+      let recPayoutDisplay = row.recommended_payout !== '' ? Number(row.recommended_payout).toFixed(2) + ' грн' : '—';
+
+      document.getElementById('modalTitle').textContent = `Видано — ${row.name_operator}`;
+      document.getElementById('modalBody').innerHTML = `
+        <div style="background:#e0f2fe; border:1px solid #bae6fd; padding:10px; border-radius:6px; margin-bottom:12px; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span style="color:#0369a1; font-weight:700;">До видачі:</span><span style="font-weight:800;">${row.amount_due.toFixed(2)} грн</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#0369a1; font-weight:700;">Рекомендовано:</span><span style="font-weight:800;">${recPayoutDisplay}</span>
+          </div>
+        </div>
+        <table class="excel-mock-table" style="${row.cash_paid_log.length ? '' : 'display:none;'}">
+          <thead><tr><th>Дата</th><th>Автор</th><th>Сума</th><th>Коментар системи</th></tr></thead><tbody>${logRows}</tbody>
+        </table>
+        <label style="font-size:11px; font-weight:700; display:block; margin-bottom:4px;">Внести суму (грн) або 0 для підтвердження:</label>
+        <input type="number" id="cashAmount" class="input-modal-style" value="${row.cash_paid !== null ? row.cash_paid : ''}" />
+        <button class="btn-fullscreen" style="width:100%; background:#16a34a; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:700; cursor:pointer;" onclick="saveCashPaid(${idx}, '${autoComment}')">Зберегти</button>
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function saveCashPaid(idx, comment) {
+      const amtVal = document.getElementById('cashAmount').value;
+      if(amtVal === '') { alert("Вкажіть суму (навіть 0)!"); return; }
+      const amt = Number(amtVal);
+      unifiedDatabase[idx].cash_paid = amt;
+      const now = new Date();
+      const dateStr = String(now.getDate()).padStart(2, '0') + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + now.getFullYear() + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      unifiedDatabase[idx].cash_paid_log.push({ date: dateStr, user: "HRHCC Admin", amount: amt, comment: comment });
+      closeBonusModal(); processAndRenderManager();
+    }
+
+    function openAdvancesModal(idx) {
+      const row = unifiedDatabase[idx];
+      let logRows = row.advances_log.map(l => `<tr><td>${l.date}</td><td>${l.amount.toFixed(2)}</td><td>${l.comment}</td></tr>`).join('');
+      document.getElementById('modalTitle').textContent = `Аванси — ${row.name_operator}`;
+      document.getElementById('modalBody').innerHTML = `
+        <table class="excel-mock-table" style="${row.advances_log.length ? '' : 'display:none;'}">
+          <thead><tr><th>Дата</th><th>Сума</th><th>Коментар</th></tr></thead><tbody>${logRows}</tbody>
+        </table>
+        <input type="number" id="advAmount" class="input-modal-style" placeholder="Сума..." />
+        <input type="text" id="advComment" class="input-modal-style" placeholder="Причина авансу..." />
+        <button class="btn-fullscreen" style="width:100%; background:#16a34a; color:#fff; border:none; padding:8px; border-radius:4px;" onclick="saveAdvance(${idx})">Додати</button>
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function saveAdvance(idx) {
+      const amt = Number(document.getElementById('advAmount').value) || 0;
+      const comment = document.getElementById('advComment').value.trim();
+      if(!comment || amt <= 0) { alert("Вкажіть суму та коментар!"); return; }
+      unifiedDatabase[idx].advances += amt;
+      unifiedDatabase[idx].advances_log.push({ date: "24.06.2026", amount: amt, comment: comment });
+      closeBonusModal(); processAndRenderManager();
+    }
+
+    function openHourlySalaryModal(idx) {
+      const row = unifiedDatabase[idx];
+      document.getElementById('modalTitle').textContent = `Інформація по ставці: ${row.name_operator}`;
+      document.getElementById('modalBody').innerHTML = `
+        <table class="excel-mock-table">
+          <thead><tr><th>Показник</th><th>Значення</th></tr></thead>
+          <tbody>
+            <tr><td>Відпрацьовано годин</td><td><strong>${row.worked_hours || row.time_work_total || 0} год</strong></td></tr>
+            <tr><td>Лінія ОБ</td><td><strong>${row.line_ob}</strong></td></tr>
+            <tr class="total-row"><td>Базова ставка (нараховано)</td><td>${row.base_salary.toFixed(2)} грн</td></tr>
+          </tbody>
+        </table>
+        <button class="btn-primary" style="width:100%; background:#e2e8f0; color:#0f172a; border:1px solid #cbd5e1; padding:6px; border-radius:4px; font-weight:700; cursor:pointer;" onclick="closeBonusModal()">Закрити</button>
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function openHourlyBonusModal(index) {
+      const row = unifiedDatabase[index]; 
+      document.getElementById('modalTitle').textContent = `Бонуси КЦ — ${row.name_operator}`;
+      document.getElementById('modalBody').innerHTML = `
+        <table class="excel-mock-table">
+          <thead><tr><th>Бонусна стаття</th><th>Сума</th></tr></thead>
+          <tbody>
+            <tr><td>Бонус за нічні зміни</td><td>${Number(row.night_bonus_tab).toFixed(2)}</td></tr>
+            <tr><td>Відрахування за критичні помилки</td><td>${Number(row.sum_critical_errors_kpi).toFixed(2)}</td></tr>
+            <tr><td>Бонус за відпрацьовані години</td><td>${Number(row.salary_bonus_hour_tab).toFixed(2)}</td></tr>
+            <tr><td>Бонус за 1 місце</td><td>${Number(row.bonus_1st_place_tab).toFixed(2)}</td></tr>
+            <tr><td>Мотивація 10</td><td>${Number(row.bonus_10_tab).toFixed(2)}</td></tr>
+            <tr><td>Бонус Блокування ПК</td><td>${Number(row.qualification_pc_lock_tab_b).toFixed(2)}</td></tr>
+            <tr><td>Бонус Робота в кампаніях</td><td>${Number(row.qualification_camp_work_tab_b).toFixed(2)}</td></tr>
+            <tr><td>Бонус Платіжні картки</td><td>${Number(row.qualification_pay_card_tab_b).toFixed(2)}</td></tr>
+            <tr><td>Бонус Обмін валют</td><td>${Number(row.qualification_curr_exchenge_tab_b).toFixed(2)}</td></tr>
+            <tr><td>Бонус Чат-бот</td><td>${Number(row.qualification_chatbot_tab_b).toFixed(2)}</td></tr>
+            <tr><td>Бонус за подяки</td><td>${Number(row.bonus_thank_tab).toFixed(2)}</td></tr>
+            <tr><td>Бонус за менторство</td><td>${Number(row.bonus_mentor_tab).toFixed(2)}</td></tr>
+            <tr><td>Бонус за навчання</td><td>${Number(row.bonus_training_tab).toFixed(2)}</td></tr>
+            <tr><td>Бонус Приведи друга</td><td>${Number(row.bonus_friend_tab).toFixed(2)}</td></tr>
+            <tr><td>Оплата "Відеоідентифікація"</td><td>${Number(row.bonus_video_tab).toFixed(2)}</td></tr>
+            <tr><td>Оплата "Навчання"</td><td>${Number(row.rate_study_tab).toFixed(2)}</td></tr>
+            <tr class="total-row"><td>Всього КПІ:</td><td>${row.bonus_amount.toFixed(2)}</td></tr>
+          </tbody>
+        </table>
+        <button class="btn-primary" style="width:100%; background:#e2e8f0; color:#0f172a; border:1px solid #cbd5e1; padding:6px; border-radius:4px; font-weight:700; cursor:pointer;" onclick="closeBonusModal()">Закрити</button>
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function openCardPaidDetails(idx, isBonusField) {
+      const row = unifiedDatabase[idx];
+      document.getElementById('modalTitle').textContent = isBonusField ? `На карту премії` : `На карту (Основне)`;
+      
+      let tableContent = isBonusField ? `
+        <tr><td>Лікарняні</td><td>${row.off_sick_pay.toFixed(2)}</td></tr>
+        <tr><td>Відпускні</td><td>${row.vacation_cash.toFixed(2)}</td></tr>
+        <tr><td>Компенсації при звільненні</td><td>${row.dismissal_cash.toFixed(2)}</td></tr>
+        <tr class="total-row"><td>Всього премій:</td><td>${row.card_bonus_paid.toFixed(2)}</td></tr>
+      ` : `
+        <tr><td>Офіційна ЗП</td><td>${row.card_base_paid.toFixed(2)}</td></tr>
+        <tr class="total-row"><td>Всього основних:</td><td>${row.card_base_paid.toFixed(2)}</td></tr>
+      `;
+      document.getElementById('modalBody').innerHTML = `
+        <table class="excel-mock-table"><thead><tr><th>Категорія виплати</th><th>Сума</th></tr></thead><tbody>${tableContent}</tbody></table>
+        <button class="btn-primary" style="width:100%; background:#e2e8f0; color:#0f172a; border:1px solid #cbd5e1; padding:6px; border-radius:4px; font-weight:700; cursor:pointer;" onclick="closeBonusModal()">Закрити</button>
+      `;
+      document.getElementById('bonusModal').style.display = 'flex';
+    }
+
+    function closeBonusModal() { document.getElementById('bonusModal').style.display = 'none'; activeEditingIndex = null; }
+
+    function handleSort(code) {
+      currentSortDirection = (currentSortColumn === code && currentSortDirection === 'asc') ? 'desc' : 'asc';
+      currentSortColumn = code;
+      unifiedDatabase.sort((a, b) => {
+        let valA = a[code]; let valB = b[code];
+        if (valA === null || valA === undefined || valA === '') return currentSortDirection === 'asc' ? 1 : -1;
+        if (valB === null || valB === undefined || valB === '') return currentSortDirection === 'asc' ? -1 : 1;
+        if (typeof valA === 'number' && typeof valB === 'number') return currentSortDirection === 'asc' ? valA - valB : valB - valA;
+        return currentSortDirection === 'asc' ? String(valA).localeCompare(String(valB), 'uk') : String(valB).localeCompare(String(valA), 'uk');
+      });
+      processAndRenderManager();
+    }
+
+    function renderTableHTML(displayedRows) {
+      const table = document.getElementById('salaryTable');
+      
+      const ths = generalColumns.map(col => {
+        let sortIcon = '';
+        if (currentSortColumn === col.code) sortIcon = currentSortDirection === 'asc' ? '<span class="sort-icon">▲</span>' : '<span class="sort-icon">▼</span>';
+        
+        return `<th class="${col.bg}" onclick="handleSort('${col.code}')" title="Натисніть для сортування">
+                  ${col.label}${sortIcon}
+                  <span class="code" title="Натисніть, щоб скопіювати ID" onclick="copyCode('${col.code}', event)">${col.code}</span>
+                </th>`;
+      }).join('');
+
+      let tbodyRows = displayedRows.map((row) => {
+        const rIdx = unifiedDatabase.findIndex(orig => orig.id === row.id);
+        const isStaff = row.payment_type === 'Штатна';
+        const rowClass = row.date_fired ? 'fired-row' : '';
+
+        let hideCardData = (currentStatus === 'NEW' || currentStatus === 'BONUS_IN_PROGRESS');
+
+        const tds = generalColumns.map(col => {
+          let val = row[col.code];
+          if(col.code === 'name_operator') return `<td><strong>${val}</strong></td>`;
+          if(col.code === 'position') return `<td class="${col.bg}" style="white-space: normal !important; min-width: 140px; max-width: 160px; line-height: 1.2; font-size: 10px;">${val}</td>`;
+          if(col.code === 'hire_fire_dates') {
+            return `<td class="${col.bg}" style="white-space: normal !important; min-width: 90px;"><div style="font-size:10px; line-height:1.4;"><span style="color:#15803d; font-weight:700;">Пр: ${row.date_hired}</span>${row.date_fired ? `<br><span style="color:#b91c1c; font-weight:700;">Зв: ${row.date_fired}</span>` : ''}</div></td>`;
+          }
+          if(col.code === 'payment_type') return `<td><span class="badge-type ${isStaff ? 'type-staff' : 'type-hourly'}">${val}</span></td>`;
+          if(col.code === 'carryover_past') return `<td class="${col.bg}"><strong>${val.toFixed(2)}</strong></td>`;
+          if(col.code === 'amount_due') return `<td class="${col.bg}"><strong>${val.toFixed(2)}</strong></td>`;
+          if(col.code === 'recommended_payout') return `<td class="${col.bg}"><strong>${(val === '' || val === null) ? '' : Number(val).toFixed(2)}</strong></td>`;
+          
+          if(col.code === 'card_base_paid') {
+              if (hideCardData) return `<td class="${col.bg}"><span class="empty">—</span></td>`;
+              return `<td class="${col.bg}"><span class="interactive-link" onclick="openCardPaidDetails(${rIdx}, false)">${val.toFixed(2)} грн</span></td>`;
+          }
+          if(col.code === 'card_bonus_paid') {
+              if (hideCardData) return `<td class="${col.bg}"><span class="empty">—</span></td>`;
+              return `<td class="${col.bg}"><span class="interactive-link" onclick="openCardPaidDetails(${rIdx}, true)">${val.toFixed(2)} грн</span></td>`;
+          }
+
+          if(col.code === 'base_salary') {
+              let editable = isEditable('base_salary', 'manager');
+              if (isStaff) {
+                  return `<td class="${col.bg}"><span class="interactive-link" onclick="openSalaryPlanModal(${rIdx}, ${!editable})">${val.toFixed(2)} грн</span></td>`;
+              } else {
+                  return `<td class="${col.bg}"><span class="interactive-link" onclick="openHourlySalaryModal(${rIdx})">${val.toFixed(2)} грн</span></td>`;
+              }
+          }
+
+          if(col.code === 'bonus_amount') {
+              let editable = isEditable('bonus_amount', 'manager');
+              if (isStaff) {
+                  return `<td class="${col.bg}"><span class="interactive-link" onclick="openStaffBonusModal(${rIdx}, ${!editable})">${val.toFixed(2)} грн</span></td>`;
+              } else {
+                  return `<td class="${col.bg}"><span class="interactive-link" onclick="openHourlyBonusModal(${rIdx})">${val.toFixed(2)} грн</span></td>`;
+              }
+          }
+
+          if(col.code === 'additional_adjustments') {
+              let editable = isEditable('additional_adjustments', 'manager');
+              let display = val !== 0 ? val.toFixed(2) : '—';
+              if (val !== 0 || editable) {
+                  return `<td class="${col.bg}"><span class="interactive-link" onclick="openAdditionalModal(${rIdx}, ${!editable})">${display}</span></td>`;
+              }
+              return `<td class="${col.bg}">—</td>`;
+          }
+
+          if(col.code === 'cash_paid') {
+              let isFilled = val !== null;
+              let display = isFilled ? val.toFixed(2) + ' грн' : '+ Внести';
+              if (isEditable('cash_paid', 'manager')) return `<td class="${col.bg}"><span class="interactive-link" onclick="openCashPaidModal(${rIdx})">${display}</span></td>`;
+              return `<td class="${col.bg}">${isFilled ? val.toFixed(2) + ' грн' : '—'}</td>`;
+          }
+
+          if(col.code === 'advances') {
+              let isFilled = val > 0;
+              let display = isFilled ? val.toFixed(2) + ' грн' : '+ Аванс';
+              if (isEditable('advances', 'manager')) return `<td class="${col.bg}"><span class="interactive-link" onclick="openAdvancesModal(${rIdx})">${display}</span></td>`;
+              return `<td class="${col.bg}">${isFilled ? val.toFixed(2) + ' грн' : '—'}</td>`;
+          }
+
+          if(col.code === 'carryforward_next') return `<td class="${col.bg}"><strong>${val.toFixed(2)}</strong></td>`;
+          if(col.code === 'total_earned') return `<td class="${col.bg}"><strong>${val.toFixed(2)}</strong></td>`;
+          if(col.code === 'total_paid_combined') return `<td class="${col.bg}"><strong>${val.toFixed(2)}</strong></td>`;
+          
+          return `<td class="${col.bg}">${val}</td>`;
+        }).join('');
+
+        return `<tr class="${rowClass}">${tds}</tr>`;
+      }).join('');
+
+      table.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${tbodyRows || '<tr><td colspan="17" style="text-align:center; padding:20px;">Порожній результат</td></tr>'}</tbody>`;
+    }
+
+    function exportGeneralToExcel() { alert("Файл Excel сформовано."); }
+
+    function resetGeneralSimulation() {
+      unifiedDatabase = INITIAL_DB_BACKUP.map(obj => ({...obj, yearly_salary_plan: obj.yearly_salary_plan ? {...obj.yearly_salary_plan} : null, _mockData: {...obj._mockData}}));
+      currentStatus = 'NEW';
+      isHourlyTranslated = false; 
+      kupFlags = { of: false, sick: false, vacUsed: false, vacUnused: false }; 
+      processAndRenderManager();
+      if(document.getElementById('view-hkc').classList.contains('active-view')) processAndRenderHkc();
+    }
+
+
+    // ==========================================
+    // 4. В'Ю 2: РОЗРАХУНОК ЗП ПОГОДИННИКИ (HOURLY)
+    // ==========================================
+    const hourlyPayload = {
+      columns: [
+        {"code": "name_operator", "label": "ПІП оператора"}, {"code": "line_ob", "label": "Лінія ОБ"}, {"code": "time_work_fact", "label": "Кількість відпрацьованих год. (фактична категорія)"}, {"code": "time_work_pre", "label": "Кількість відпрацьованих год. (попередня категорія)"}, {"code": "time_work_total", "label": "Кількість відпрацьованих год. (загальна)"}, {"code": "interval_20_22_qua", "label": "Відпрацьовані години 20:00 - 22:00"}, {"code": "line_eng_tab", "label": "Бонус за роботу на лінії English"}, {"code": "salary_sum_hour_tab", "label": "Сума за відпрацьовані години"}, {"code": "interval_23_07_qua", "label": "Відпрацьовані години нічні 23-07"}, {"code": "interval_23_07_sum", "label": "Сума за нічні години"}, {"code": "night_bonus_tab", "label": "Бонус за нічні зміни"}, {"code": "critical_errors_50_tab", "label": "Всього критичних помилок до 50%"}, {"code": "critical_errors_99_tab", "label": "Всього критичних помилок 50-99%"}, {"code": "critical_errors_100_tab", "label": "Всього критичних помилок 100%"}, {"code": "critical_errors_200_tab", "label": "Всього критичних помилок 200%"}, {"code": "sum_critical_errors_real", "label": "Сума реальна (критичні помилки)"}, {"code": "sum_critical_errors_kpi", "label": "Сума до КПІ (критичні помилки)"}, {"code": "salary_bonus_hour_tab", "label": "Бонус за відпрацьовані години"}, {"code": "call_status_p_hold", "label": "Статус %HOLD"}, {"code": "call_status_hold", "label": "Статус HOLD"}, {"code": "call_status_c_card", "label": "Статус Заповнення картки дзвінка"}, {"code": "call_status_reg_app", "label": "Статус Робота з реєстром звернень"}, {"code": "call_status_camp_work", "label": "Статус Робота в кампанії"}, {"code": "coeff_status_p_hold_tab", "label": "Коефіцієнт %HOLD"}, {"code": "coeff_status_hold_tab", "label": "Коефіцієнт HOLD"}, {"code": "coeff_status_card_tab", "label": "Коефіцієнт Картка дзвінка"}, {"code": "coeff_status_reg_app_tab", "label": "Коефіцієнт Реєстр звернень"}, {"code": "coeff_status_camp_work_tab", "label": "Коефіцієнт Робота в кампанії"}, {"code": "coeff_status_sum_tab", "label": "Сумарний коефіцієнт статусів"}, {"code": "place_ranking", "label": "Місце в рейтингу"}, {"code": "coeff_quality_work_tab", "label": "Коефіцієнт за якість роботи"}, {"code": "total_coeff_stat_qua_tab", "label": "Загальний коефіцієнт (статуси+якість)"}, {"code": "bonus_1st_place_tab", "label": "Бонус за 1-е місце"}, {"code": "bonus_10_tab", "label": "Мотивація 10%"}, {"code": "qualification_pc_lock_tab", "label": "Кваліфікація Блокування ПК"}, {"code": "qualification_pc_lock_tab_b", "label": "Бонус Блокування ПК"}, {"code": "qualification_camp_work_tab", "label": "Кваліфікація Робота в кампаніях"}, {"code": "qualification_camp_work_tab_b", "label": "Бонус Робота в кампаніях"}, {"code": "qualification_pay_card_tab", "label": "Кваліфікація Платіжні картки"}, {"code": "qualification_pay_card_tab_b", "label": "Бонус Платіжні картки"}, {"code": "qualification_curr_exchenge_tab", "label": "Кваліфікація Обмін валют"}, {"code": "qualification_curr_exchenge_tab_b", "label": "Бонус Обмін валют"}, {"code": "qualification_chatbot_tab", "label": "Кваліфікація Чат-Бот"}, {"code": "qualification_chatbot_tab_b", "label": "Бонус Чат-бот"}, {"code": "number_thank_tab", "label": "Кількість подяк"}, {"code": "bonus_thank_tab", "label": "Бонус за подяки"}, {"code": "number_mentor_tab", "label": "Менторство, к-сть опер."}, {"code": "bonus_mentor_tab", "label": "Bonus ментор"}, {"code": "bonus_training_tab", "label": "Бонус за навчання"}, {"code": "bonus_friend_tab", "label": "Бонус \"Приведи друга\""}, {"code": "time_video_tab", "label": "Час \"Відеоідентифікація\""}, {"code": "bonus_video_tab", "label": "Оплата \"Відеоідентифікація\""}, {"code": "time_study_tab", "label": "Час \"Навчання\""}, {"code": "rate_study_tab", "label": "Оплата \"Навчання\""},
+        {"code": "total_salary_tab", "label": "Всього ЗП"}, {"code": "total_kpi_tab", "label": "Всього КПІ"}
+      ],
+      systemFields: ["bonus_10_tab", "bonus_1st_place_tab", "bonus_mentor_tab", "bonus_thank_tab", "bonus_video_tab", "coeff_quality_work_tab", "coeff_status_camp_work_tab", "coeff_status_card_tab", "coeff_status_hold_tab", "coeff_status_p_hold_tab", "coeff_status_reg_app_tab", "coeff_status_sum_tab", "interval_23_07_sum", "night_bonus_tab", "qualification_camp_work_tab_b", "qualification_chatbot_tab_b", "qualification_curr_exchenge_tab_b", "qualification_pay_card_tab_b", "qualification_pc_lock_tab_b", "rate_study_tab", "salary_bonus_hour_tab", "salary_sum_hour_tab", "sum_critical_errors_kpi", "sum_critical_errors_real", "total_coeff_stat_qua_tab", "total_kpi_tab", "total_salary_tab"],
+      manualFields: ["bonus_friend_tab", "bonus_training_tab", "interval_23_07_qua", "line_eng_tab", "line_ob", "number_mentor_tab", "number_thank_tab", "qualification_curr_exchenge_tab", "time_work_pre"],
+      fileGroups: [
+        {"id": "file_status", "mockName": "Statusi_sichen_2026.xls", "name": "Файл 1: Статуси", "desc": "Фактичні год, Загальні год, Вечірні 20-22, Відеоідентифікація.", "fields": ["time_work_fact", "time_work_total", "interval_20_22_qua", "time_video_tab"]},
+        {"id": "file_critical", "mockName": "Kritichni_pomilki_v1.xls", "name": "Файл 2: Помилки", "desc": "Розподіл критичних помилок: 50%, 50-99%, 100%, 200%.", "fields": ["critical_errors_50_tab", "critical_errors_99_tab", "critical_errors_100_tab", "critical_errors_200_tab"]},
+        {"id": "file_kcc", "mockName": "Kilk_Pokazniki_KC.xls", "name": "Файл 3: Кількісні КЦ", "desc": "Внутрішні статуси КЦ (%HOLD, HOLD, картка дзвінка, кампанії).", "fields": ["call_status_p_hold", "call_status_hold", "call_status_c_card", "call_status_reg_app", "call_status_camp_work"]},
+        {"id": "file_rating", "mockName": "General_KC_Rating.xls", "name": "Файл 4: Рейтинг", "desc": "Позиціонування оператора в рейтингу якості.", "fields": ["place_ranking"]},
+        {"id": "file_training_plan", "mockName": "Plan_Navchanya_Doman.xls", "name": "Файл 5: Навчання План", "desc": "Маркери кваліфікацій (ПК, Кампанії, Картки, Чат-боти).", "fields": ["qualification_pc_lock_tab", "qualification_camp_work_tab", "qualification_pay_card_tab", "qualification_chatbot_tab"]},
+        {"id": "file_study_time", "mockName": "Chas_Navchanya_Fact.xls", "name": "Файл 6: Час Навчання", "desc": "Час знаходження в статусі навчання оператора.", "fields": ["time_study_tab"]}
+      ]
+    };
+
+    let hourlyLoadedFilesMap = {}; let hourlyActiveTabId = "file_status";
+    let hourlyManualFilled = false; let hourlyCalculated = false; let hourlyTotalCalculated = false;
+    let hourlyPendingFileIdToReload = null; let hourlyVisibleFields = new Set(["name_operator"]);
+    let hourlyUserHiddenFields = new Set();
+    
+    let hourlyCurrentSortColumn = null;
+    let hourlyCurrentSortDirection = 'asc';
+    let hourlyCurrentPage = 1;
+
+    function toggleHourlyFullscreenTable() {
+      const card = document.getElementById('hourlyTableCardBlock');
+      const btn = document.getElementById('hourlyToggleFullscreenBtn');
+      if (card.classList.contains('fullscreen-mode')) {
+        card.classList.remove('fullscreen-mode'); btn.textContent = "🖵 На весь екран";
+      } else {
+        card.classList.add('fullscreen-mode'); btn.textContent = "✖ Згорнути макет";
+      }
+    }
+
+    function toggleHourlyColumnVisibility(code, event) {
+      if (event) event.stopPropagation();
+      if (hourlyUserHiddenFields.has(code)) hourlyUserHiddenFields.delete(code);
+      else hourlyUserHiddenFields.add(code);
+      renderHourlyTable();
+    }
+
+    function handleHourlyFiltersChange() {
+      hourlyCurrentPage = 1;
+      renderHourlyTable();
+    }
+
+    function handleHourlySort(code) {
+      let hourlyRows = unifiedDatabase.filter(r => r.payment_type === "Погодинна");
+      if (hourlyUserHiddenFields.has(code) || hourlyRows.length === 0) return;
+
+      if (hourlyCurrentSortColumn === code) {
+        hourlyCurrentSortDirection = hourlyCurrentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        hourlyCurrentSortColumn = code;
+        hourlyCurrentSortDirection = 'asc';
+      }
+      
+      unifiedDatabase.sort((a, b) => {
+        let valA = a[code]; let valB = b[code];
+        if (valA === null || valA === undefined || valA === '') return hourlyCurrentSortDirection === 'asc' ? 1 : -1;
+        if (valB === null || valB === undefined || valB === '') return hourlyCurrentSortDirection === 'asc' ? -1 : 1;
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return hourlyCurrentSortDirection === 'asc' ? valA - valB : valB - valA;
+        }
+        return hourlyCurrentSortDirection === 'asc' ? String(valA).localeCompare(String(valB), 'uk') : String(valB).localeCompare(String(valA), 'uk');
+      });
+      renderHourlyTable();
+    }
+
+    function goToStep1() {
+      if (document.getElementById('step1').classList.contains('done')) return;
+      hourlyVisibleFields = new Set(["name_operator", "line_ob"]); 
+      hourlyLoadedFilesMap = {}; hourlyManualFilled = false; hourlyCalculated = false; hourlyTotalCalculated = false;
+      hourlyUserHiddenFields.clear(); hourlyCurrentSortColumn = null; hourlyCurrentPage = 1;
+
+      document.getElementById('operatorsCount').textContent = unifiedDatabase.filter(r => r.payment_type === "Погодинна").length;
+      document.getElementById('hourlyTotalSalary').textContent = '—';
+      document.getElementById('hourlyBtnExportExcel').style.display = 'none';
+
+      updateStepUI(1, 'done'); updateStepUI(2, 'pending');
+      setHourlyStatus('Чернетка ПІП', 'badge-draft');
+      renderHourlyTable();
+      hourlyLog('Крок 1 виконано', 'Підтягнуто погодинних операторів з Єдиної Бази.');
+    }
+
+    function goToStep2() {
+      if (!document.getElementById('step1').classList.contains('done')) return;
+      document.getElementById('filesUploadBlock').style.display = 'block';
+      initTabs();
+      updateHourlyProgress();
+    }
+
+    function initTabs() {
+      const nav = document.getElementById('tabsNav');
+      const content = document.getElementById('tabsContent');
+      nav.innerHTML = ""; content.innerHTML = "";
+
+      hourlyPayload.fileGroups.forEach((fg) => {
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${fg.id === hourlyActiveTabId ? 'active' : ''}`;
+        btn.id = `tab_btn_${fg.id}`;
+        btn.textContent = fg.name.split(': ')[1]; 
+        btn.onclick = () => switchTab(fg.id);
+        nav.appendChild(btn);
+
+        const inner = document.createElement('div');
+        inner.className = `tab-content ${fg.id === hourlyActiveTabId ? 'active' : ''}`;
+        inner.id = `tab_content_${fg.id}`;
+        renderTabInnerContent(inner, fg);
+        content.appendChild(inner);
+      });
+    }
+
+    function renderTabInnerContent(container, fg) {
+      const isLoaded = !!hourlyLoadedFilesMap[fg.id];
+      if (!isLoaded) {
+        container.innerHTML = `
+          <div class="upload-zone">
+            <div><strong>${fg.name}</strong> <span style="color:var(--muted); font-size:10px;">(${fg.desc})</span></div>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <select id="user_${fg.id}" style="font-size:10px; padding:2px;">
+                <option value="HRHCC Admin">HRHCC Admin</option>
+                <option value="Менеджер КЦ">Менеджер КЦ</option>
+              </select>
+              <button class="btn-primary" style="padding:4px 8px; font-size:11px; background:#0284c7; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="triggerUploadMock('${fg.id}')">Імпорт</button>
+            </div>
+          </div>
+        `;
+      } else {
+        const meta = hourlyLoadedFilesMap[fg.id];
+        container.innerHTML = `
+          <div class="upload-zone">
+            <div>
+              <span style="color:var(--success); font-weight:700;">✔ ${meta.name} завантажено</span>
+              <span style="color:var(--muted); font-size:10px; margin-left:10px;">[${meta.datetime} | ${meta.user}]</span>
+            </div>
+            <button class="btn-danger" style="padding:3px 6px; font-size:10px; background:var(--danger); color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="askReloadFile('${fg.id}')">Перезалити</button>
+          </div>
+        `;
+      }
+    }
+
+    function switchTab(id) {
+      hourlyActiveTabId = id;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      const targetBtn = document.getElementById(`tab_btn_${id}`);
+      const targetContent = document.getElementById(`tab_content_${id}`);
+      if(targetBtn) targetBtn.classList.add('active');
+      if(targetContent) targetContent.classList.add('active');
+    }
+
+    function triggerUploadMock(id) {
+      const fg = hourlyPayload.fileGroups.find(f => f.id === id);
+      const user = document.getElementById(`user_${id}`).value;
+      executeFileImport(id, fg.mockName, user);
+    }
+
+    function executeFileImport(id, fileName, user) {
+      const fg = hourlyPayload.fileGroups.find(f => f.id === id);
+      
+      unifiedDatabase.filter(r => r.payment_type === "Погодинна").forEach((row) => {
+        fg.fields.forEach(fld => { 
+          if(row._mockData && row._mockData[fld] !== undefined) {
+             row[fld] = row._mockData[fld]; 
+          }
+          hourlyVisibleFields.add(fld); 
+        });
+        if(id === 'file_status') row['time_work_total'] = row['time_work_fact'];
+      });
+
+      hourlyLoadedFilesMap[id] = { name: fileName, user: user, datetime: new Date().toLocaleTimeString('uk-UA') };
+      const tabBtn = document.getElementById(`tab_btn_${id}`);
+      if (tabBtn) tabBtn.classList.add('file-loaded');
+      renderTabInnerContent(document.getElementById(`tab_content_${id}`), fg);
+
+      if (Object.keys(hourlyLoadedFilesMap).length >= 1) {
+        document.getElementById('hourlyBtnExportExcel').style.display = 'inline-block';
+      }
+
+      updateHourlyProgress(); renderHourlyTable(); hourlyLog(`Імпорт`, `${fileName} успішно імпортовано.`);
+
+      if (Object.keys(hourlyLoadedFilesMap).length === hourlyPayload.fileGroups.length) {
+        updateStepUI(2, 'done'); updateStepUI(3, 'pending');
+        setHourlyStatus('Файли завантажено', 'badge-ok');
+        document.getElementById('filesUploadBlock').style.display = 'none';
+      } else {
+        const nextEmpty = hourlyPayload.fileGroups.find(f => !hourlyLoadedFilesMap[f.id]);
+        if (nextEmpty) switchTab(nextEmpty.id);
+      }
+    }
+
+    function askReloadFile(id) {
+      hourlyPendingFileIdToReload = id;
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirmModal').style.display = 'none';
+      hourlyPendingFileIdToReload = null;
+    }
+
+    function confirmReloadFile() {
+      if(hourlyPendingFileIdToReload) {
+        const id = hourlyPendingFileIdToReload;
+        const user = hourlyLoadedFilesMap[id].user;
+        const fg = hourlyPayload.fileGroups.find(f => f.id === id);
+        closeConfirmModal();
+        executeFileImport(id, fg.mockName.replace('.xls', '_RELOAD.xls'), user);
+      }
+    }
+
+    function updateHourlyManualValue(id, code, val) {
+      let row = unifiedDatabase.find(r => r.id === id);
+      if (row) {
+        if(val === '') row[code] = null;
+        else row[code] = isNaN(Number(val)) ? val : Number(val);
+      }
+    }
+
+    function goToStep3() {
+      if (!document.getElementById('step2').classList.contains('done')) return;
+      unifiedDatabase.filter(r => r.payment_type === "Погодинна").forEach((row) => {
+        hourlyPayload.manualFields.forEach(fld => { 
+          if(row._mockData && row._mockData[fld] !== undefined) {
+             row[fld] = row._mockData[fld]; 
+          }
+          hourlyVisibleFields.add(fld); 
+        });
+      });
+      hourlyManualFilled = true;
+      updateStepUI(3, 'done'); updateStepUI(4, 'pending');
+      setHourlyStatus('Ручні дані заповнено', 'badge-info');
+      renderHourlyTable(); hourlyLog('Крок 3 виконано', 'Поля ручного введення активовані.');
+    }
+
+    function goToStep4() {
+      if (!hourlyManualFilled || hourlyCalculated) return;
+
+      unifiedDatabase.filter(r => r.payment_type === "Погодинна").forEach((row) => {
+        let hours = Number(row.time_work_total) || 0;
+        
+        row['salary_sum_hour_tab'] = hours * 85;
+        row['interval_23_07_sum'] = (Number(row.interval_23_07_qua) || 0) * 45;
+        row['night_bonus_tab'] = row['interval_23_07_sum'] > 0 ? 500 : 0;
+        row['sum_critical_errors_real'] = (Number(row.critical_errors_50_tab)||0)*100;
+        row['sum_critical_errors_kpi'] = row['sum_critical_errors_real'] > 400 ? 400 : row['sum_critical_errors_real'];
+        row['salary_bonus_hour_tab'] = hours > 140 ? 1200 : 700;
+        row['coeff_status_sum_tab'] = 0.15;
+        row['coeff_quality_work_tab'] = 1.0;
+        row['total_coeff_stat_qua_tab'] = 1.15;
+        row['total_kpi_tab'] = (row['salary_bonus_hour_tab'] + row['night_bonus_tab']) * 1.15;
+        row['total_salary_tab'] = row['salary_sum_hour_tab'] + row['total_kpi_tab'] - row['sum_critical_errors_kpi'];
+
+        hourlyPayload.systemFields.forEach(fld => {
+          if(row[fld] === null || row[fld] === undefined || row[fld] === '') {
+             row[fld] = (row._mockData && row._mockData[fld] !== undefined) ? row._mockData[fld] : 0;
+          }
+          hourlyVisibleFields.add(fld);
+        });
+      });
+
+      hourlyCalculated = true;
+      updateStepUI(4, 'done'); updateStepUI(5, 'pending');
+      setHourlyStatus('Розраховано', 'badge-ok');
+      renderHourlyTable(); hourlyLog('Крок 4 виконано', 'Системні розрахунки виконано.');
+    }
+
+    function goToStep5() {
+      if (!hourlyCalculated || hourlyTotalCalculated) return;
+      const totalZp = unifiedDatabase.filter(r => r.payment_type === "Погодинна").reduce((sum, r) => sum + (Number(r.total_salary_tab) || 0), 0);
+      document.getElementById('hourlyTotalSalary').textContent = new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH', maximumFractionDigits: 0 }).format(totalZp);
+      
+      hourlyTotalCalculated = true;
+      updateStepUI(5, 'done'); updateStepUI(6, 'pending');
+      setHourlyStatus('Підсумок готовий', 'badge-ok');
+      hourlyLog('Крок 5 виконано', 'Фінансовий пул зведено.');
+    }
+
+    function goToStep6() {
+      if (!hourlyTotalCalculated) return;
+
+      getHourlyWorkers().forEach(row => {
+        row.base_salary = Number(row.salary_sum_hour_tab) || 0;
+        row.bonus_amount = Number(row.total_kpi_tab) || 0;
+      });
+
+      isHourlyTranslated = true;
+
+      if (currentStatus === 'NEW') {
+          advanceWorkflow(); 
+      } else {
+          processAndRenderManager();
+      }
+
+      updateStepUI(6, 'done');
+      setHourlyStatus('Трансльовано', 'badge-purple');
+      hourlyLog('Крок 6 виконано', 'Дані успішно продубльовані у Зарплатну відомість керівника.');
+    }
+
+    function updateStepUI(step, state) {
+      const el = document.getElementById('step' + step);
+      if (el) el.className = 'step-btn ' + state;
+    }
+
+    function changeHourlyPage(page) {
+      hourlyCurrentPage = page;
+      renderHourlyTable();
+    }
+
+    function formatHourlyValue(value) {
+      if (value === null || value === undefined || value === '') return '<span class="empty">—</span>';
+      if (typeof value === 'number') return value.toFixed(2);
+      return String(value);
+    }
+
+    function exportHourlyToExcel() {
+      const table = document.getElementById('hourlySalaryTable');
+      if (!table) return;
+
+      let excelTemplate = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">`;
+      excelTemplate += `<head><meta charset="UTF-8"></head><body>`;
+      
+      let clonedTable = table.cloneNode(true);
+      clonedTable.querySelectorAll('.visibility-toggle, .code, .sort-icon').forEach(el => el.remove());
+      
+      excelTemplate += clonedTable.outerHTML;
+      excelTemplate += `</body></html>`;
+
+      const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `HomeNet_Hourly_Payroll_${new Date().toISOString().slice(0,10)}.xls`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    function renderHourlyTable() {
+      const table = document.getElementById('hourlySalaryTable');
+      const paginationNav = document.getElementById('hourlyPaginationNav');
+      
+      const colFilterMode = document.getElementById('hourlyFilterColumns').value;
+      const rowLimitMode = document.getElementById('hourlyRowLimit').value; 
+      const searchQuery = document.getElementById('hourlySearchName').value.trim().toLowerCase();
+      const selectedLines = Array.from(document.querySelectorAll('.ob-checkbox input:checked')).map(cb => parseInt(cb.value));
+
+      let hourlyRows = unifiedDatabase.filter(r => r.payment_type === "Погодинна");
+
+      let visibleColsCount = 0;
+
+      const ths = hourlyPayload.columns.map(col => {
+        let isSystemVisible = hourlyVisibleFields.has(col.code);
+        if (!isSystemVisible) return `<th class="col-hidden"></th>`;
+
+        if (colFilterMode === 'uploaded') {
+          const isUploadedField = hourlyPayload.fileGroups.some(group => group.fields.includes(col.code)) || col.code === 'name_operator';
+          if (!isUploadedField) return `<th class="col-hidden"></th>`;
+        } else if (colFilterMode === 'manual') {
+          if (!hourlyPayload.manualFields.includes(col.code) && col.code !== 'name_operator') return `<th class="col-hidden"></th>`;
+        } else if (colFilterMode === 'calculations') {
+          if (!hourlyPayload.systemFields.includes(col.code) && col.code !== 'name_operator') return `<th class="col-hidden"></th>`;
+        }
+
+        visibleColsCount++;
+        const isCollapsed = hourlyUserHiddenFields.has(col.code);
+        const isPip = col.code === 'name_operator';
+
+        if (isCollapsed) {
+          return `<th class="col-collapsed" title="Розгорнути: ${col.label}"><span class="visibility-toggle" onclick="toggleHourlyColumnVisibility('${col.code}', event)">🙈</span></th>`;
+        }
+
+        let sortIndicator = '';
+        if (hourlyCurrentSortColumn === col.code) {
+          sortIndicator = hourlyCurrentSortDirection === 'asc' ? '<span class="sort-icon">▲</span>' : '<span class="sort-icon">▼</span>';
+        }
+
+        return `
+          <th onclick="handleHourlySort('${col.code}')">
+            <div class="th-content">
+              <div class="th-label">
+                ${col.label} ${sortIndicator}
+                <span class="code" title="Натисніть, щоб скопіювати ID" onclick="copyCode('${col.code}', event)">${col.code}</span>
+              </div>
+              ${isPip ? '' : `<span class="visibility-toggle" title="Приховати" onclick="toggleHourlyColumnVisibility('${col.code}', event)">👁</span>`}
+            </div>
+          </th>`;
+      }).join('');
+
+      let filteredRows = [];
+      if (hourlyRows.length > 0) {
+        filteredRows = hourlyRows.filter((row) => {
+          if (searchQuery.length >= 3 && !row.name_operator.toLowerCase().includes(searchQuery)) return false;
+          if (!selectedLines.includes(row.line_ob)) return false;
+          return true;
+        });
+      }
+
+      let displayedRows = filteredRows;
+      paginationNav.innerHTML = ""; 
+
+      if (rowLimitMode !== 'all' && filteredRows.length > 0) {
+        const limit = parseInt(rowLimitMode);
+        const totalPages = Math.ceil(filteredRows.length / limit);
+        if (hourlyCurrentPage > totalPages) hourlyCurrentPage = totalPages || 1;
+        const startIdx = (hourlyCurrentPage - 1) * limit;
+        displayedRows = filteredRows.slice(startIdx, startIdx + limit);
+
+        if (totalPages > 1) {
+          let navHtml = `<span class="page-link ${hourlyCurrentPage === 1 ? 'disabled' : ''}" onclick="${hourlyCurrentPage === 1 ? '' : `changeHourlyPage(${hourlyCurrentPage - 1})`}">« Назад</span>`;
+          for (let i = 1; i <= totalPages; i++) {
+            navHtml += `<span class="page-link ${i === hourlyCurrentPage ? 'active' : ''}" onclick="changeHourlyPage(${i})">${i}</span>`;
+          }
+          navHtml += `<span class="page-link ${hourlyCurrentPage === totalPages ? 'disabled' : ''}" onclick="${hourlyCurrentPage === totalPages ? '' : `changeHourlyPage(${hourlyCurrentPage + 1})`}">Вперед »</span>`;
+          paginationNav.innerHTML = navHtml;
+        }
+      }
+
+      let tbodyRows = displayedRows.map((row) => {
+        const tds = hourlyPayload.columns.map(col => {
+          let isSystemVisible = hourlyVisibleFields.has(col.code);
+          if (!isSystemVisible) return `<td class="col-hidden"></td>`;
+
+          if (colFilterMode === 'uploaded') {
+            const isUploadedField = hourlyPayload.fileGroups.some(group => group.fields.includes(col.code)) || col.code === 'name_operator';
+            if (!isUploadedField) return `<td class="col-hidden"></td>`;
+          } else if (colFilterMode === 'manual') {
+            if (!hourlyPayload.manualFields.includes(col.code) && col.code !== 'name_operator') return `<td class="col-hidden"></td>`;
+          } else if (colFilterMode === 'calculations') {
+            if (!hourlyPayload.systemFields.includes(col.code) && col.code !== 'name_operator') return `<td class="col-hidden"></td>`;
+          }
+
+          if (hourlyUserHiddenFields.has(col.code)) return `<td class="col-collapsed"></td>`;
+
+          let cellContent = "";
+          if (hourlyManualFilled && hourlyPayload.manualFields.includes(col.code) && !hourlyCalculated) {
+            cellContent = `<input class="manual-input" value="${row[col.code] ?? ''}" onchange="updateHourlyManualValue(${row.id}, '${col.code}', this.value)" />`;
+          } else if (hourlyPayload.systemFields.includes(col.code) && !hourlyCalculated) {
+            cellContent = `<span class="system-empty">розрахунок</span>`;
+          } else {
+            cellContent = formatHourlyValue(row[col.code]);
+          }
+          return `<td>${cellContent}</td>`;
+        }).join('');
+        return `<tr>${tds}</tr>`;
+      }).join('');
+
+      table.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${tbodyRows || `<tr><td class="empty" colspan="56" style="text-align:center; padding:20px;">Нічого не знайдено за вказаними фільтрами.</td></tr>`}</tbody>`;
+      document.getElementById('visibleColsCounter').textContent = `Колонок активовано: ${visibleColsCount} / 56`;
+    }
+
+    function updateHourlyProgress() {
+      const count = Object.keys(hourlyLoadedFilesMap).length;
+      document.getElementById('filesCount').textContent = count;
+      document.getElementById('progressBar').style.width = (count / 6 * 100) + '%';
+    }
+
+    function setHourlyStatus(text, badgeClass) {
+      const badge = document.getElementById('hourlyStatusBadge');
+      badge.textContent = text; badge.className = 'badge ' + badgeClass;
+    }
+
+    function hourlyLog(title, meta) {
+      const item = document.createElement('div');
+      item.className = 'event';
+      item.innerHTML = `<strong>[${new Date().toLocaleTimeString('uk-UA')}] ${title}</strong> · ${meta}`;
+      document.getElementById('eventLog').prepend(item);
+    }
+
+    function resetHourlySimulation() {
+      unifiedDatabase.filter(r => r.payment_type === "Погодинна").forEach(row => {
+         const backupRow = INITIAL_DB_BACKUP.find(b => b.id === row.id);
+         Object.keys(row).forEach(key => {
+            if(key !== "id" && key !== "name_operator" && key !== "payment_type" && key !== "position" && key !== "date_hired" && key !== "date_fired" && key !== "carryover_past" && key !== "_mockData") {
+               row[key] = backupRow[key]; 
+            }
+         });
+      });
+
+      hourlyLoadedFilesMap = {}; hourlyVisibleFields = new Set(["name_operator"]);
+      hourlyManualFilled = false; hourlyCalculated = false; hourlyTotalCalculated = false;
+      hourlyUserHiddenFields.clear(); hourlyCurrentSortColumn = null; hourlyCurrentPage = 1;
+      isHourlyTranslated = false; 
+
+      document.getElementById('hourlySearchName').value = "";
+      document.getElementById('hourlyFilterColumns').value = "all";
+      document.getElementById('hourlyRowLimit').value = "all"; 
+      document.querySelectorAll('.ob-checkbox input').forEach(cb => cb.checked = true);
+      document.getElementById('hourlyBtnExportExcel').style.display = 'none';
+
+      const card = document.getElementById('hourlyTableCardBlock');
+      if (card.classList.contains('fullscreen-mode')) {
+        card.classList.remove('fullscreen-mode');
+        document.getElementById('hourlyToggleFullscreenBtn').textContent = "🖵 На весь екран";
+      }
+
+      document.getElementById('operatorsCount').textContent = '0';
+      document.getElementById('filesCount').textContent = '0';
+      document.getElementById('hourlyTotalSalary').textContent = '—';
+      document.getElementById('progressBar').style.width = '0%';
+      setHourlyStatus('Очікування запуску', 'badge-draft');
+      
+      document.getElementById('filesUploadBlock').style.display = 'none';
+
+      document.getElementById('step1').className = 'step-btn pending';
+      for (let i = 2; i <= 6; i++) document.getElementById('step' + i).className = 'step-btn disabled';
+      
+      document.getElementById('eventLog').innerHTML = "";
+      renderEmptyHourlyTable();
+      processAndRenderManager(); 
+    }
+
+    function renderEmptyHourlyTable() {
+      const table = document.getElementById('hourlySalaryTable');
+      document.getElementById('hourlyPaginationNav').innerHTML = ""; 
+      const ths = hourlyPayload.columns.map(col => {
+        const isFirst = col.code === 'name_operator';
+        return `<th class="${isFirst ? '' : 'col-hidden'}">
+                  ${col.label}
+                  <span class="code" title="Натисніть, щоб скопіювати ID" onclick="copyCode('${col.code}', event)">${col.code}</span>
+                </th>`;
+      }).join('');
+      
+      table.innerHTML = `<thead><tr>${ths}</tr></thead><tbody><tr><td class="empty" colspan="56" style="text-align:center; padding:30px;">Відомість порожня. Активуйте «Крок 1. ПІП» для початку сценарію.</td></tr></tbody>`;
+      document.getElementById('visibleColsCounter').textContent = `Колонок: 1 / 56`;
+    }
+
+    // ==========================================
+    // В'Ю 3: НАЛАШТУВАННЯ КОЕФІЦІЄНТІВ
+    // ==========================================
+    var settingsPayload = {"headers": ["Дані:", "признак", "ID", "Значення (вміст)", "формат значення", "тип"], "valueColumn": "Значення (вміст)", "idColumns": ["ID"], "rows": [{"Дані:": "", "признак": "", "ID": "rate_work_4", "Значення (вміст)": 70, "формат значення": "ціле позитивне число", "тип": "грн"}, {"Дані:": "Ставка погодинної оплати, 1-а лінія, грн., СК, 3-я лінія, грн. (1)", "признак": "", "ID": "rate_work_1", "Значення (вміст)": 70, "формат значення": "ціле позитивне число", "тип": "грн"}, {"Дані:": "Ставка погодинної оплати, 1-а лінія, грн. кв. Вихідні кампанії (2)", "признак": "", "ID": "rate_work_2", "Значення (вміст)": 75, "формат значення": "ціле позитивне число", "тип": "грн"}, {"Дані:": "Ставка погодинної оплати, 2-а лінія, грн. (3)", "признак": "", "ID": "rate_work_3", "Значення (вміст)": 80, "формат значення": "ціле позитивне число", "тип": "грн"}, {"Дані:": "Бонус за роботу на лінії English ", "признак": "select", "ID": "line_eng", "Значення (вміст)": "1,3/1", "формат значення": "позитивне число дріб до десяти", "тип": "відсоток"}, {"Дані:": "Коефіціент за Проміжок 20-22", "признак": "", "ID": "interval_20_22", "Значення (вміст)": 1.2, "формат значення": "позитивне число дріб до ста", "тип": "відсоток"}, {"Дані:": "Ставка за Проміжок 23-07", "признак": "", "ID": "rate_23_07", "Значення (вміст)": 80, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за нічні зміни", "признак": "", "ID": "night_bonus", "Значення (вміст)": 500, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок до 50%", "признак": "", "ID": "crit_err_50", "Значення (вміст)": 52, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок  50-99%", "признак": "", "ID": "crit_err_99", "Значення (вміст)": 101, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок  100%", "признак": "", "ID": "crit_err_100", "Значення (вміст)": 205, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок  200%", "признак": "", "ID": "crit_err_200", "Значення (вміст)": 578, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок КПІ до 50%", "признак": "", "ID": "crit_err_50_kpi", "Значення (вміст)": 44, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок КПІ 50-99%", "признак": "", "ID": "crit_err_99_kpi", "Значення (вміст)": 84, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок КПІ 100%", "признак": "", "ID": "crit_err_100_kpi", "Значення (вміст)": 128, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент для помилок КПІ 200%", "признак": "", "ID": "crit_err_200_kpi", "Значення (вміст)": 430, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=200", "признак": "", "ID": "bonus_hours_work_200", "Значення (вміст)": 2500, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=190", "признак": "", "ID": "bonus_hours_work_190", "Значення (вміст)": 2300, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=180", "признак": "", "ID": "bonus_hours_work_180", "Значення (вміст)": 2100, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=170", "признак": "", "ID": "bonus_hours_work_170", "Значення (вміст)": 1900, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=160", "признак": "", "ID": "bonus_hours_work_160", "Значення (вміст)": 1600, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=150", "признак": "", "ID": "bonus_hours_work_150", "Значення (вміст)": 1200, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=140", "признак": "", "ID": "bonus_hours_work_140", "Значення (вміст)": 1000, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Бонус за відпрацьовані години>=130", "признак": "", "ID": "bonus_hours_work_130", "Значення (вміст)": 800, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіцієнт за якість роботи >=0 рейтинг <3,49", "признак": "", "ID": "work_qua_factor_1", "Значення (вміст)": 0, "формат значення": "позитивне число дріб до ста", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за якість роботи >=3,49 рейтинг <5", "признак": "", "ID": "work_qua_factor_3", "Значення (вміст)": 1, "формат значення": "позитивне число дріб до ста", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за якість роботи >=5 рейтинг <6,5", "признак": "", "ID": "work_qua_factor_5", "Значення (вміст)": 1.05, "формат значення": "позитивне число дріб до ста", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за якість роботи >=6,5 рейтинг <7,5", "признак": "", "ID": "work_qua_factor_6", "Значення (вміст)": 1.1, "формат значення": "позитивне число дріб до ста", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за якість роботи >=7,5 рейтинг", "признак": "", "ID": "work_qua_factor_7", "Значення (вміст)": 1.15, "формат значення": "позитивне число дріб до ста", "тип": "відсоток"}, {"Дані:": "Бонус за 1-е місце в рейтингу ", "признак": "", "ID": "bonus_1st_place", "Значення (вміст)": 800, "формат значення": "позитивне ціле число", "тип": "грн"}, {"Дані:": "Коефіціент за норму використання статусів %HOLD >0,08  call_status_p_hold  <=0,10", "признак": "", "ID": "coeff_status_p_hold_9", "Значення (вміст)": 0, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів %HOLD <=0,08  call_status_p_hold", "признак": "", "ID": "coeff_status_p_hold_8", "Значення (вміст)": 0.024, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів %HOLD >0,10  call_status_p_hold", "признак": "", "ID": "coeff_status_p_hold_10", "Значення (вміст)": -0.024, "формат значення": "від'ємне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів HOLD >30 sec  call_status_hold<=40 sec", "признак": "", "ID": "coeff_status_hold_35", "Значення (вміст)": 0, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів HOLD <=30 sec  call_status_hold", "признак": "", "ID": "coeff_status_hold_30", "Значення (вміст)": 0.054, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів HOLD >40 sec  call_status_hold", "признак": "", "ID": "coeff_status_hold_40", "Значення (вміст)": -0.024, "формат значення": "від'ємне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Заповнення картки дзвінка\n> 7 sec call_status_c_card < 10 sec", "признак": "", "ID": "coeff_status_card_9", "Значення (вміст)": 0, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Заповнення картки дзвінка\n<= 7 sec call_status_c_card", "признак": "", "ID": "coeff_status_card_7", "Значення (вміст)": 0.024, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Заповнення картки дзвінка\n>= 10 sec call_status_c_card", "признак": "", "ID": "coeff_status_card_10", "Значення (вміст)": -0.024, "формат значення": "від'ємне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Робота з реєстром звернень\n> 150 sec call_status_reg_app <=180 sec", "признак": "", "ID": "coeff_status_reg_app_160", "Значення (вміст)": 0, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Робота з реєстром звернень\n<= 150 sec call_status_reg_app", "признак": "", "ID": "coeff_status_reg_app_150", "Значення (вміст)": 0.024, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Робота з реєстром звернень\n> 180 sec call_status_reg_app", "признак": "", "ID": "coeff_status_reg_app_180", "Значення (вміст)": -0.024, "формат значення": "від'ємне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Робота в кампанії\n> 30 sec call_status_camp_work <= 40 sec", "признак": "", "ID": "coeff_status_camp_work_35", "Значення (вміст)": 0, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Робота в кампанії\n<= 30 sec call_status_camp_work ", "признак": "", "ID": "coeff_status_camp_work_30", "Значення (вміст)": 0.024, "формат значення": "позитивне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Коефіцієнт за норму використання статусів Робота в кампанії\n> 40 sec call_status_camp_work ", "признак": "", "ID": "coeff_status_camp_work_40", "Значення (вміст)": -0.024, "формат значення": "від'ємне число дріб до тисячі", "тип": "відсоток"}, {"Дані:": "Бонус 10%", "признак": "", "ID": "bonus_10", "Значення (вміст)": 0.1, "формат значення": "відсоток", "тип": ""}, {"Дані:": "Бонус Кваліфікація Блокування ПК >= 130 time_work_total", "признак": "", "ID": "qualification_pc_lock_1", "Значення (вміст)": 800, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Блокування ПК >= 80 time_work_total <129", "признак": "", "ID": "qualification_pc_lock_2", "Значення (вміст)": 500, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Блокування ПК < 80 time_work_total", "признак": "", "ID": "qualification_pc_lock_3", "Значення (вміст)": 0, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Робота в Кампаніях >= 130 time_work_total", "признак": "", "ID": "qualification_camp_work_1", "Значення (вміст)": 800, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Робота в Кампаніях >= 80 time_work_total <129", "признак": "", "ID": "qualification_camp_work_2", "Значення (вміст)": 500, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Робота в Кампаніях < 80 time_work_total", "признак": "", "ID": "qualification_camp_work_3", "Значення (вміст)": 0, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Платіжні картки >= 130 time_work_total", "признак": "", "ID": "qualification_pay_card_1", "Значення (вміст)": 800, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Платіжні картки >= 80 time_work_total <129", "признак": "", "ID": "qualification_pay_card_2", "Значення (вміст)": 500, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Платіжні картки < 80 time_work_total", "признак": "", "ID": "qualification_pay_card_3", "Значення (вміст)": 0, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Обмін валют >= 130 time_work_total", "признак": "", "ID": "qualification_curr_exchenge_1", "Значення (вміст)": 800, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Обмін валют >= 80 time_work_total <129", "признак": "", "ID": "qualification_curr_exchenge_2", "Значення (вміст)": 500, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Обмін валют < 80 time_work_total", "признак": "", "ID": "qualification_curr_exchenge_3", "Значення (вміст)": 0, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Чат-бот >= 130 time_work_total", "признак": "", "ID": "qualification_chatbot_1", "Значення (вміст)": 800, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Чат-бот >= 80 time_work_total <129", "признак": "", "ID": "qualification_chatbot_2", "Значення (вміст)": 500, "формат значення": "", "тип": ""}, {"Дані:": "Бонус Кваліфікація Чат-бот < 80 time_work_total", "признак": "", "ID": "qualification_chatbot_3", "Значення (вміст)": 0, "формат значення": "", "тип": ""}, {"Дані:": "Бонус за подяку", "признак": "", "ID": "bonus_thank", "Значення (вміст)": 350, "формат значення": "", "тип": ""}, {"Дані:": "Бонус за менторство", "признак": "", "ID": "bonus_mentor", "Значення (вміст)": 500, "формат значення": "", "тип": ""}, {"Дані:": "Відеоідентифікація бонус", "признак": "", "ID": "bonus_video", "Значення (вміст)": 15, "формат значення": "", "тип": ""}]};
+    
+    var setHeaders = settingsPayload.headers.filter(Boolean);
+    var setValueColumn = settingsPayload.valueColumn;
+    var setIdColumns = new Set(settingsPayload.idColumns || []);
+    var setOriginalRows = JSON.parse(JSON.stringify(settingsPayload.rows));
+    var setRows = JSON.parse(JSON.stringify(settingsPayload.rows));
+    var isSetEditMode = false;
+
+    function isSettingsIdColumn(header) {
+      return setIdColumns.has(header) || String(header).trim().toLowerCase() === 'id';
+    }
+
+    function normalizeSettingsNumber(value) {
+      const raw = String(value ?? '').trim().replace(/\s+/g, '').replace(',', '.');
+      if (raw === '') return '';
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return null;
+      return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
+    function formatSettingsValue(value) {
+      if (value === null || value === undefined || value === '') return '<span class="muted">—</span>';
+      if (typeof value === 'number') {
+        return new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+      }
+      return escapeSettingsHtml(String(value));
+    }
+
+    function renderSettingsTable() {
+      const search = document.getElementById('searchSettingsInput').value.trim().toLowerCase();
+
+      const filteredRows = setRows
+        .map((row, index) => ({ row, index }))
+        .filter(item => {
+          if (!search) return true;
+          return setHeaders.some(header => String(item.row[header] ?? '').toLowerCase().includes(search));
+        });
+
+      const thead = `<thead><tr>${setHeaders.map(header => `<th>${escapeSettingsHtml(header)}</th>`).join('')}</tr></thead>`;
+      
+      const tbody = `<tbody>${filteredRows.map(item => `<tr>${setHeaders.map(header => renderSettingsCell(item.row, item.index, header)).join('')}</tr>`).join('')}</tbody>`;
+
+      document.getElementById('paramsTable').innerHTML = thead + tbody;
+    }
+
+    function renderSettingsCell(row, rowIndex, header) {
+      const value = row[header];
+
+      if (isSettingsIdColumn(header)) {
+        return `<td class="id-cell">${formatSettingsValue(value)}</td>`;
+      }
+
+      const isDataCol = header.trim().toLowerCase() === 'дані:';
+      const isValueCol = header === setValueColumn;
+
+      if (isValueCol || isDataCol) {
+        const originalValue = setOriginalRows[rowIndex]?.[header] ?? '';
+        const changed = String(value ?? '') !== String(originalValue ?? '');
+
+        if (isSetEditMode) {
+          const inputMode = isValueCol ? 'inputmode="decimal"' : '';
+          return `
+            <td class="value-cell ${changed ? 'changed' : ''}">
+              <input class="value-input-set" ${inputMode} value="${escapeSettingsHtml(value ?? '')}" onchange="updateSettingsValue(${rowIndex}, '${header}', this.value, this)" />
+            </td>
+          `;
+        }
+
+        return `<td class="value-cell ${changed ? 'changed' : ''}"><span class="readonly-value">${formatSettingsValue(value)}</span></td>`;
+      }
+
+      return `<td>${formatSettingsValue(value)}</td>`;
+    }
+
+    function updateSettingsValue(rowIndex, header, value, inputEl) {
+      if (header === setValueColumn) {
+        const normalized = normalizeSettingsNumber(value);
+        if (normalized === null) {
+          inputEl.classList.add('invalid');
+          settingsLog('Помилка значення', `Рядок ${rowIndex + 1}: дозволене тільки числове значення.`);
+          return;
+        }
+        inputEl.classList.remove('invalid');
+        setRows[rowIndex][header] = normalized;
+        settingsLog('Змінено значення', `Рядок ${rowIndex + 1}, "${header}" = "${normalized}"`);
+      } else {
+        inputEl.classList.remove('invalid');
+        setRows[rowIndex][header] = value;
+        settingsLog('Змінено значення', `Рядок ${rowIndex + 1}, "${header}" = "${value}"`);
+      }
+      renderSettingsTable();
+    }
+
+    function enableSettingsEdit() {
+      isSetEditMode = true;
+      document.getElementById('btnSetEdit').disabled = true;
+      document.getElementById('btnSetSave').disabled = false;
+      document.getElementById('settingsModeStatus').textContent = 'Режим редагування';
+      document.getElementById('settingsModeStatus').className = 'set-status-edit';
+      document.getElementById('settingsModeStatus').style.background = '#fef3c7';
+      document.getElementById('settingsModeStatus').style.color = '#92400e';
+      renderSettingsTable();
+      settingsLog('Редагування увімкнено', `Відкрито редагування полів "Дані:" та стовпчика "${setValueColumn}". ID заблоковані.`);
+    }
+
+    function saveSettingsValues() {
+      isSetEditMode = false;
+      
+      for (let i = 0; i < setRows.length; i++) {
+        setOriginalRows[i][setValueColumn] = setRows[i][setValueColumn];
+        setOriginalRows[i]['Дані:'] = setRows[i]['Дані:'];
+      }
+
+      document.getElementById('btnSetEdit').disabled = false;
+      document.getElementById('btnSetSave').disabled = true;
+      document.getElementById('settingsModeStatus').textContent = 'Збережено';
+      document.getElementById('settingsModeStatus').style.background = '#dcfce7';
+      document.getElementById('settingsModeStatus').style.color = '#166534';
+      renderSettingsTable();
+      settingsLog('Значення збережено', `Зміни успішно зафіксовано.`);
+    }
+
+    function resetSettingsValues() {
+      setRows = JSON.parse(JSON.stringify(setOriginalRows));
+      isSetEditMode = false;
+      document.getElementById('btnSetEdit').disabled = false;
+      document.getElementById('btnSetSave').disabled = true;
+      document.getElementById('settingsModeStatus').textContent = 'Режим перегляду';
+      document.getElementById('settingsModeStatus').style.background = '#f3f4f6';
+      document.getElementById('settingsModeStatus').style.color = '#4b5563';
+      renderSettingsTable();
+      settingsLog('Зміни скасовано', 'Значення повернуто до останнього збереженого стану.');
+    }
+
+    function settingsLog(title, meta) {
+      const item = document.createElement('div');
+      item.className = 'event';
+      item.innerHTML = `<div style="font-weight:900;">${escapeSettingsHtml(title)}</div><div style="color:var(--muted); font-size:12px; margin-top:2px;">${new Date().toLocaleTimeString('uk-UA')} · ${escapeSettingsHtml(meta)}</div>`;
+      document.getElementById('settingsEventLog').prepend(item);
+    }
+
+    function escapeSettingsHtml(value) {
+      return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+
+    // ==========================================
+    // ІНІЦІАЛІЗАЦІЯ СИСТЕМИ
+    // ==========================================
+    setTimeout(() => {
+       processAndRenderManager();
+       renderEmptyHourlyTable();
+       renderSettingsTable();
+    }, 50);
+  </script>
+</body>
+</html>
