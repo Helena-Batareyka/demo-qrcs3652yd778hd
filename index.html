@@ -223,8 +223,8 @@
       <div class="logo"><div class="logo-mark"></div><span>Home-Net HR</span></div>
       
       <div class="menu-title">HOME-KЦ Зарплата</div>
-      <div class="menu-item" id="menu-hourly" onclick="switchView('hourly')">Розрахунок ЗП погодинники</div>
-      <div class="menu-item active" id="menu-manager" onclick="switchView('manager')">Зарплатна відомість керівника</div>
+      <div class="menu-item" active id="menu-hourly" onclick="switchView('hourly')">Розрахунок ЗП погодинники</div>
+      <div class="menu-item" id="menu-manager" onclick="switchView('manager')">Зарплатна відомість керівника</div>
       <div class="menu-item" id="menu-hkc" onclick="switchView('hkc')">Зарплатна відомість HOME-КЦ</div>
       <div class="menu-item" id="menu-settings" onclick="switchView('settings')">Налаштування коефіціентів</div>
     </aside>
@@ -234,7 +234,7 @@
       <!-- ========================================== -->
       <!-- В'Ю 1: ЗАРПЛАТНА ВІДОМІСТЬ КЕРІВНИКА (MANAGER) -->
       <!-- ========================================== -->
-      <div id="view-manager" class="view-container active-view">
+      <div id="view-manager" class="view-container">
         <div class="topbar">
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 16px;">
@@ -380,7 +380,7 @@
       <!-- ========================================== -->
       <!-- В'Ю 2: РОЗРАХУНОК ЗП ПОГОДИННИКИ (HOURLY)  -->
       <!-- ========================================== -->
-      <div id="view-hourly" class="view-container">
+      <div id="view-hourly" class="view-container active-view">
         <div class="topbar">
           <div>
             <h1>Розрахунок ЗП Погодинники</h1>
